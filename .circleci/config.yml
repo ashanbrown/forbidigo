@@ -1,0 +1,13 @@
+version: 2
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.12
+    steps:
+      - checkout
+      - run: sudo apt-get -y -qq install python python-pip
+      - run: pip install pre-commit
+      - run: SKIP=no-commit-to-branch pre-commit run -a
+      - run: go test ./...
+      - run: make test
