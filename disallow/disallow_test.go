@@ -19,6 +19,16 @@ func foo() {
 }`, "use of `fmt.Printf` disallowed by pattern `fmt\\.Printf` at testing.go:5:2")
 	})
 
+	t.Run("it doesn't require a package on the identifier", func(t *testing.T) {
+		linter, _ := NewLinter(`Printf`)
+		expectIssues(t, linter, `
+package bar
+
+func foo() {
+	Printf("here i am")
+}`, "use of `Printf` disallowed by pattern `Printf` at testing.go:5:2")
+	})
+
 	t.Run("allows explicitly allowing identifiers", func(t *testing.T) {
 		linter, _ := NewLinter(`fmt\.Printf`)
 		expectIssues(t, linter, `
