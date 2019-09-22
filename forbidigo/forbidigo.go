@@ -1,5 +1,5 @@
-// nouse provides a linter for disallow the use of specific identifiers
-package disallow
+// nouse provides a linter for forbidding the use of specific identifiers
+package forbidigo
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ type UsedIssue struct {
 }
 
 func (a UsedIssue) Details() string {
-	return fmt.Sprintf("use of `%s` disallowed by pattern `%s`", a.identifier, a.pattern)
+	return fmt.Sprintf("use of `%s` forbidden by pattern `%s`", a.identifier, a.pattern)
 }
 
 func (a UsedIssue) Position() token.Position {
@@ -45,7 +45,7 @@ func DefaultPatterns() []string {
 	return []string{`^fmt\.Print(|f|ln)$`}
 }
 
-func NewLinter(patterns ...string) (*Linter, error) {
+func NewLinter(patterns []string) (*Linter, error) {
 	if len(patterns) == 0 {
 		patterns = DefaultPatterns()
 	}
@@ -96,7 +96,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 		return v
 	}
 	for _, p := range v.linter.patterns {
-		if p.MatchString(v.textFor(node)) && !v.allow(node) {
+		if p.MatchString(v.textFor(node)) && !v.permit(node) {
 			v.issues = append(v.issues, UsedIssue{
 				identifier: v.textFor(node),
 				pattern:    p.String(),
@@ -115,9 +115,9 @@ func (v *visitor) textFor(node ast.Node) string {
 	return buf.String()
 }
 
-func (v *visitor) allow(node ast.Node) bool {
+func (v *visitor) permit(node ast.Node) bool {
 	nodePos := v.fset.Position(node.Pos())
-	var nolint = regexp.MustCompile(fmt.Sprintf(`^allow:%s\b`, regexp.QuoteMeta(v.textFor(node))))
+	var nolint = regexp.MustCompile(fmt.Sprintf(`^permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
 	for _, c := range v.comments {
 		commentPos := v.fset.Position(c.Pos())
 		if commentPos.Line == nodePos.Line && nolint.MatchString(c.Text()) {

@@ -1,4 +1,4 @@
-module github.com/ashanbrown/disallow
+module github.com/ashanbrown/forbidigo
 
 go 1.12
 

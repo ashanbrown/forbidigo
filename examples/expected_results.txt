@@ -1,1 +1,1 @@
-use of `fmt.Println` disallowed by pattern `^fmt\.Print(|f|ln)$` at /Users/andrewbrown/Projects/disallow/examples/example.go:6:2
+use of `fmt.Println` forbidden by pattern `^fmt\.Print(|f|ln)$` at /Users/andrewbrown/Projects/forbidigo/examples/example.go:6:2

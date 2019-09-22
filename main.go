@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/ashanbrown/disallow/disallow"
+	"github.com/ashanbrown/forbidigo/forbidigo"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -16,7 +16,7 @@ func main() {
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
 	flag.Parse()
 
-	patterns := disallow.DefaultPatterns()
+	patterns := forbidigo.DefaultPatterns()
 
 	firstPkg := 0
 	for n, arg := range flag.Args() {
@@ -34,12 +34,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not load packages: %s", err)
 	}
-	linter, err := disallow.NewLinter(patterns...)
+	linter, err := forbidigo.NewLinter(patterns)
 	if err != nil {
 		log.Fatalf("Could not create linter: %s", err)
 	}
 
-	var issues []disallow.Issue // nolint:prealloc // we don't know how many there will be
+	var issues []forbidigo.Issue // nolint:prealloc // we don't know how many there will be
 	for _, p := range pkgs {
 		nodes := make([]ast.Node, 0, len(p.Syntax))
 		for _, n := range p.Syntax {

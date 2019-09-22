@@ -1,4 +1,4 @@
-package disallow
+package forbidigo
 
 import (
 	"go/parser"
@@ -8,34 +8,34 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDisallow(t *testing.T) {
-	t.Run("it finds disallowed identifiers", func(t *testing.T) {
-		linter, _ := NewLinter(`fmt\.Printf`)
+func TestForbiddenIdentifiers(t *testing.T) {
+	t.Run("it finds forbidden identifiers", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`fmt\.Printf`})
 		expectIssues(t, linter, `
 package bar
 
 func foo() {
 	fmt.Printf("here i am")
-}`, "use of `fmt.Printf` disallowed by pattern `fmt\\.Printf` at testing.go:5:2")
+}`, "use of `fmt.Printf` forbidden by pattern `fmt\\.Printf` at testing.go:5:2")
 	})
 
 	t.Run("it doesn't require a package on the identifier", func(t *testing.T) {
-		linter, _ := NewLinter(`Printf`)
+		linter, _ := NewLinter([]string{`Printf`})
 		expectIssues(t, linter, `
 package bar
 
 func foo() {
 	Printf("here i am")
-}`, "use of `Printf` disallowed by pattern `Printf` at testing.go:5:2")
+}`, "use of `Printf` forbidden by pattern `Printf` at testing.go:5:2")
 	})
 
-	t.Run("allows explicitly allowing identifiers", func(t *testing.T) {
-		linter, _ := NewLinter(`fmt\.Printf`)
+	t.Run("allows explicitly permitting otherwise forbidden identifiers", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`fmt\.Printf`})
 		expectIssues(t, linter, `
 package bar
 
 func foo() {
-	fmt.Printf("here i am") // allow:fmt.Printf
+	fmt.Printf("here i am") // permit:fmt.Printf
 }`)
 	})
 }
