@@ -10,6 +10,12 @@ forbidigo is a Go static analysis tool to forbidigo use of particular identifier
 
     forbidigo [flags...] patterns... -- packages...
 
+Some example patterns would be:
+
+    fmt\.Printf.* -- forbid use of printfg
+    fmt\.Errorf -- forbid Errorf in favor of using github.com/pkg/errors
+    ginkgo\.F.* -- forbid ginkgo focused commands (used for debug issues)
+
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
 
