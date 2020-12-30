@@ -15,7 +15,7 @@ Some example patterns would be:
 * `fmt\.Printf.*` -- forbid use of Printf because it is likely just for debugging
 * `fmt\.Errorf` -- forbid Errorf in favor of using github.com/pkg/errors
 * `ginkgo\.F.*` -- forbid ginkgo focused commands (used for debug issues)
-* `spew.Dump` -- forbid dumping detailed data to stdout
+* `spew\.Dump` -- forbid dumping detailed data to stdout
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
