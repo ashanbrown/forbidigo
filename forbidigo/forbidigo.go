@@ -1,4 +1,4 @@
-// nouse provides a linter for forbidding the use of specific identifiers
+// forbidigo provides a linter for forbidding the use of specific identifiers
 package forbidigo
 
 import (
