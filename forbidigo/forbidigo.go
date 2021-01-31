@@ -9,6 +9,9 @@ import (
 	"go/token"
 	"log"
 	"regexp"
+	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Issue interface {
@@ -38,6 +41,7 @@ func toString(i Issue) string {
 }
 
 type Linter struct {
+	cfg      config
 	patterns []*regexp.Regexp
 }
 
@@ -45,7 +49,19 @@ func DefaultPatterns() []string {
 	return []string{`^fmt\.Print(|f|ln)$`}
 }
 
-func NewLinter(patterns []string) (*Linter, error) {
+//go:generate go-options config
+type config struct {
+	// don't check inside Godoc examples (see https://blog.golang.org/examples)
+	ExcludeGodocExamples   bool `options:",true"`
+	IgnorePermitDirectives bool // don't check for `permit` directives(for example, in favor of `nolint`)
+}
+
+func NewLinter(patterns []string, options ...Option) (*Linter, error) {
+	cfg, err := newConfig(options...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to process options")
+	}
+
 	if len(patterns) == 0 {
 		patterns = DefaultPatterns()
 	}
@@ -58,11 +74,15 @@ func NewLinter(patterns []string) (*Linter, error) {
 		compiledPatterns = append(compiledPatterns, re)
 	}
 	return &Linter{
+		cfg:      cfg,
 		patterns: compiledPatterns,
 	}, nil
 }
 
 type visitor struct {
+	cfg        config
+	isTestFile bool // godoc only runs on test files
+
 	linter   *Linter
 	comments []*ast.CommentGroup
 
@@ -74,13 +94,48 @@ func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 	var issues []Issue // nolint:prealloc // we don't know how many there will be
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
+		isTestFile := false
+		isWholeFileExample := false
 		if file, ok := node.(*ast.File); ok {
 			comments = file.Comments
+			fileName := fset.Position(file.Pos()).Filename
+			isTestFile = strings.HasSuffix(fileName, "_test.go")
+
+			// From https://blog.golang.org/examples, a "whole file example" is:
+			// a file that ends in _test.go and contains exactly one example function,
+			// no test or benchmark functions, and at least one other package-level declaration.
+			if l.cfg.ExcludeGodocExamples && isTestFile && len(file.Decls) > 1 {
+				numExamples := 0
+				numTestsAndBenchmarks := 0
+				for _, decl := range file.Decls {
+					funcDecl, isFuncDecl := decl.(*ast.FuncDecl)
+					// consider only functions, not methods
+					if !isFuncDecl || funcDecl.Recv != nil || funcDecl.Name == nil {
+						continue
+					}
+					funcName := funcDecl.Name.Name
+					if strings.HasPrefix(funcName, "Test") || strings.HasPrefix(funcName, "Benchmark") {
+						numTestsAndBenchmarks++
+						break // not a whole file example
+					}
+					if strings.HasPrefix(funcName, "Example") {
+						numExamples++
+					}
+				}
+
+				// if this is a whole file example, skip this node
+				isWholeFileExample = numExamples == 1 && numTestsAndBenchmarks == 0
+			}
+		}
+		if isWholeFileExample {
+			continue
 		}
 		visitor := visitor{
-			linter:   l,
-			fset:     fset,
-			comments: comments,
+			cfg:        l.cfg,
+			isTestFile: isTestFile,
+			linter:     l,
+			fset:       fset,
+			comments:   comments,
 		}
 		ast.Walk(&visitor, node)
 		issues = append(issues, visitor.issues...)
@@ -89,7 +144,14 @@ func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 }
 
 func (v *visitor) Visit(node ast.Node) ast.Visitor {
-	switch node.(type) {
+	switch node := node.(type) {
+	case *ast.FuncDecl:
+		// don't descend into godoc examples if we are ignoring them
+		isGodocExample := v.isTestFile && node.Recv == nil && node.Name != nil && strings.HasPrefix(node.Name.Name, "Example")
+		if isGodocExample && v.cfg.ExcludeGodocExamples {
+			return nil
+		}
+		return v
 	case *ast.SelectorExpr:
 	case *ast.Ident:
 	default:
@@ -116,6 +178,9 @@ func (v *visitor) textFor(node ast.Node) string {
 }
 
 func (v *visitor) permit(node ast.Node) bool {
+	if v.cfg.IgnorePermitDirectives {
+		return false
+	}
 	nodePos := v.fset.Position(node.Pos())
 	var nolint = regexp.MustCompile(fmt.Sprintf(`^permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
 	for _, c := range v.comments {
