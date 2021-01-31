@@ -14,7 +14,7 @@ func main() {
 	log.SetFlags(0) // remove log timestamp
 
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
-	excludeGodocExamples := flag.Bool("ignore_godoc_examples", true, "Ignore code in godoc examples")
+	excludeGodocExamples := flag.Bool("exclude_godoc_examples", true, "Exclude code in godoc examples")
 	flag.Parse()
 
 	patterns := forbidigo.DefaultPatterns()
