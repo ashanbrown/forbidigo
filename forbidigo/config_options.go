@@ -15,7 +15,7 @@ func newConfig(options ...Option) (config, error) {
 }
 
 func applyConfigOptions(c *config, options ...Option) error {
-	c.IgnoreGodocExamples = true
+	c.ExcludeGodocExamples = true
 	for _, o := range options {
 		if err := o.apply(c); err != nil {
 			return err
@@ -28,10 +28,10 @@ type Option interface {
 	apply(*config) error
 }
 
-// OptionIgnoreGodocExamples don't check inside Godoc examples (see https://blog.golang.org/examples)
-func OptionIgnoreGodocExamples(o bool) ApplyOptionFunc {
+// OptionExcludeGodocExamples don't check inside Godoc examples (see https://blog.golang.org/examples)
+func OptionExcludeGodocExamples(o bool) ApplyOptionFunc {
 	return func(c *config) error {
-		c.IgnoreGodocExamples = o
+		c.ExcludeGodocExamples = o
 		return nil
 	}
 }

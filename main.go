@@ -14,6 +14,7 @@ func main() {
 	log.SetFlags(0) // remove log timestamp
 
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
+	excludeGodocExamples := flag.Bool("ignore_godoc_examples", true, "Ignore code in godoc examples")
 	flag.Parse()
 
 	patterns := forbidigo.DefaultPatterns()
@@ -34,7 +35,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not load packages: %s", err)
 	}
-	linter, err := forbidigo.NewLinter(patterns)
+	options := []forbidigo.Option{
+		forbidigo.OptionExcludeGodocExamples(*excludeGodocExamples),
+	}
+	linter, err := forbidigo.NewLinter(patterns, options...)
 	if err != nil {
 		log.Fatalf("Could not create linter: %s", err)
 	}

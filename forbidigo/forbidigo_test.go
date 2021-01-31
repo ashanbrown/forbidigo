@@ -50,7 +50,7 @@ func foo() {
 		assert.NotEmpty(t, issues)
 	})
 
-	t.Run("examples are ignored by default in test files", func(t *testing.T) {
+	t.Run("examples are excluded by default in test files", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
 		issues := parseFile(t, linter, "file_test.go", `
 package bar
@@ -61,7 +61,7 @@ func ExampleFoo() {
 		assert.Empty(t, issues)
 	})
 
-	t.Run("whole file examples are ignored by default", func(t *testing.T) {
+	t.Run("whole file examples are excluded by default", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
 		issues := parseFile(t, linter, "file_test.go", `
 package bar
@@ -105,7 +105,7 @@ func Example() {
 	})
 
 	t.Run("examples can be included", func(t *testing.T) {
-		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionIgnoreGodocExamples(false))
+		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionExcludeGodocExamples(false))
 		issues := parseFile(t, linter, "file.go", `
 package bar
 

@@ -10,7 +10,9 @@ forbidigo is a Go static analysis tool to forbidigo use of particular identifier
 
     forbidigo [flags...] patterns... -- packages...
 
-If no patterns are specified, the default pattern of `fmt\.Printf.*` is used to eliminate debug statememts.
+If no patterns are specified, the default pattern of `fmt\.Printf.*` is used to eliminate debug statememts.  By default,
+functions (and whole files), that are identifies as Godoc examples (https://blog.golang.org/examples) are excluded from 
+checking.
 
 A larger set of interesting patterns might include:
 
@@ -23,6 +25,7 @@ Note that the linter has no knowledge of what packages were actually imported, s
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
+- **-exclude_godoc_examples** (default true) - Controls whether godoc examples are identified and excluded
 
 ## Purpose
 

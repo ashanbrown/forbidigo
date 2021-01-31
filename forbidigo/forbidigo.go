@@ -52,7 +52,7 @@ func DefaultPatterns() []string {
 //go:generate go-options config
 type config struct {
 	// don't check inside Godoc examples (see https://blog.golang.org/examples)
-	IgnoreGodocExamples    bool `options:",true"`
+	ExcludeGodocExamples   bool `options:",true"`
 	IgnorePermitDirectives bool // don't check for `permit` directives(for example, in favor of `nolint`)
 }
 
@@ -104,7 +104,7 @@ func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 			// From https://blog.golang.org/examples, a "whole file example" is:
 			// a file that ends in _test.go and contains exactly one example function,
 			// no test or benchmark functions, and at least one other package-level declaration.
-			if l.cfg.IgnoreGodocExamples && isTestFile && len(file.Decls) > 1 {
+			if l.cfg.ExcludeGodocExamples && isTestFile && len(file.Decls) > 1 {
 				numExamples := 0
 				numTestsAndBenchmarks := 0
 				for _, decl := range file.Decls {
@@ -148,7 +148,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.FuncDecl:
 		// don't descend into godoc examples if we are ignoring them
 		isGodocExample := v.isTestFile && node.Recv == nil && node.Name != nil && strings.HasPrefix(node.Name.Name, "Example")
-		if isGodocExample && v.cfg.IgnoreGodocExamples {
+		if isGodocExample && v.cfg.ExcludeGodocExamples {
 			return nil
 		}
 		return v
