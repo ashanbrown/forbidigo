@@ -10,16 +10,16 @@ forbidigo is a Go static analysis tool to forbidigo use of particular identifier
 
     forbidigo [flags...] patterns... -- packages...
 
-If no patterns are specified, the default pattern of `fmt\.Printf.*` is used to eliminate debug statememts.  By default,
+If no patterns are specified, the default pattern of `^fmt\.Print.*$` is used to eliminate debug statememts.  By default,
 functions (and whole files), that are identifies as Godoc examples (https://blog.golang.org/examples) are excluded from 
 checking.
 
 A larger set of interesting patterns might include:
 
-* `fmt\.Printf.*` -- forbid use of Printf because it is likely just for debugging
-* `fmt\.Errorf` -- forbid Errorf in favor of using github.com/pkg/errors
-* `ginkgo\.F.*` -- forbid ginkgo focused commands (used for debug issues)
-* `spew\.Dump` -- forbid dumping detailed data to stdout
+* `^fmt\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
+* `^fmt\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
+* `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
+* `^spew\.Dump$` -- forbid dumping detailed data to stdout
 
 Note that the linter has no knowledge of what packages were actually imported, so aliased imports will match these patterns.
 
