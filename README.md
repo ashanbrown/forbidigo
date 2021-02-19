@@ -33,7 +33,7 @@ To prevent leaving format statements and temporary statements such as Ginkgo FIt
 
 ## Ignoring issues
 
-You can ignore a particular issue by including the directive `// permit` on that line
+You can ignore a particular issue by including the directive `//permit` on that line
 
 ## Contributing
 
