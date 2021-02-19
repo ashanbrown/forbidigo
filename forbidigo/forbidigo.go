@@ -91,7 +91,7 @@ type visitor struct {
 }
 
 func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
-	var issues []Issue // nolint:prealloc // we don't know how many there will be
+	var issues []Issue //nolint:prealloc // we don't know how many there will be
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
 		isTestFile := false
@@ -182,10 +182,10 @@ func (v *visitor) permit(node ast.Node) bool {
 		return false
 	}
 	nodePos := v.fset.Position(node.Pos())
-	var nolint = regexp.MustCompile(fmt.Sprintf(`^permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
+	var nolint = regexp.MustCompile(fmt.Sprintf(`^//\s?permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
 	for _, c := range v.comments {
 		commentPos := v.fset.Position(c.Pos())
-		if commentPos.Line == nodePos.Line && nolint.MatchString(c.Text()) {
+		if commentPos.Line == nodePos.Line && len(c.List) > 0 && nolint.MatchString(c.List[0].Text) {
 			return true
 		}
 	}

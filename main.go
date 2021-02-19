@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("Could not create linter: %s", err)
 	}
 
-	var issues []forbidigo.Issue // nolint:prealloc // we don't know how many there will be
+	var issues []forbidigo.Issue //nolint:prealloc // we don't know how many there will be
 	for _, p := range pkgs {
 		nodes := make([]ast.Node, 0, len(p.Syntax))
 		for _, n := range p.Syntax {
