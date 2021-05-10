@@ -35,6 +35,16 @@ func foo() {
 package bar
 
 func foo() {
+	fmt.Printf("here i am") //permit:fmt.Printf
+}`)
+	})
+
+	t.Run("allows old notation for explicitly permitting otherwise forbidden identifiers", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`fmt\.Printf`})
+		expectIssues(t, linter, `
+package bar
+
+func foo() {
 	fmt.Printf("here i am") // permit:fmt.Printf
 }`)
 	})
@@ -45,7 +55,7 @@ func foo() {
 package bar
 
 func foo() {
-	fmt.Printf("here i am") // permit:fmt.Printf
+	fmt.Printf("here i am") //permit:fmt.Printf
 }`)
 		assert.NotEmpty(t, issues)
 	})
