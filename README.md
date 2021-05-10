@@ -10,7 +10,7 @@ forbidigo is a Go static analysis tool to forbidigo use of particular identifier
 
     forbidigo [flags...] patterns... -- packages...
 
-If no patterns are specified, the default pattern of `^fmt\.Print.*$` is used to eliminate debug statememts.  By default,
+If no patterns are specified, the default pattern of `^(fmt\.Print.*|print|println)$` is used to eliminate debug statements.  By default,
 functions (and whole files), that are identifies as Godoc examples (https://blog.golang.org/examples) are excluded from 
 checking.
 
