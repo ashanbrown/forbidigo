@@ -35,7 +35,7 @@ To prevent leaving format statements and temporary statements such as Ginkgo FIt
 
 ## Ignoring issues
 
-You can ignore a particular issue by including the directive `//permit` on that line
+You can ignore a particular issue by including the directive `//permit` on that line.  *This feature is disabled inside `golangci-lint` to encourage ignoring issues using the `// nolint` directive common for all linters (nolinting well is hard and I didn't want to make an effort do it exactly right within this linter).*
 
 ## Contributing
 
