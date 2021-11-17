@@ -22,6 +22,7 @@ A larger set of interesting patterns might include:
 * `^fmt\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
 * `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
 * `^spew\.Dump$` -- forbid dumping detailed data to stdout
+* `^fmt\.Errorf(# please use github.com/pkg/errors)?$` -- forbid Errorf, with a custom message
 
 Note that the linter has no knowledge of what packages were actually imported, so aliased imports will match these patterns.
 
