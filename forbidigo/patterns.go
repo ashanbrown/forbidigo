@@ -30,7 +30,9 @@ func parse(ptrn string) (*pattern, error) {
 func extractComment(re *syntax.Regexp) string {
 	for _, sub := range re.Sub {
 		if len(sub.Sub) > 0 {
-			return extractComment(sub)
+			if comment := extractComment(sub); comment != "" {
+				return comment
+			}
 		}
 		subStr := sub.String()
 		if strings.HasPrefix(subStr, "#") {

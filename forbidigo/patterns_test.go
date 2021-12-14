@@ -22,6 +22,11 @@ func TestParseValidPatterns(t *testing.T) {
 			ptrn: `^fmt\.Errorf$`,
 		},
 		{
+			name:            "contains multiple subexpression, with comment",
+			ptrn:            `(f)mt\.Errorf(# a comment)?`,
+			expectedComment: "a comment",
+		},
+		{
 			name:            "simple expression with comment",
 			ptrn:            `fmt\.Println(# Please don't use this!)?`,
 			expectedComment: "Please don't use this!",
