@@ -28,7 +28,7 @@ type UsedIssue struct {
 }
 
 func (a UsedIssue) Details() string {
-	explanation := fmt.Sprintf(` because "%s"`, a.customMsg)
+	explanation := fmt.Sprintf(` because %q`, a.customMsg)
 	if a.customMsg == "" {
 		explanation = fmt.Sprintf(" by pattern `%s`", a.pattern)
 	}
