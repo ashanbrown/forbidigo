@@ -29,14 +29,14 @@ func parse(ptrn string) (*pattern, error) {
 // is present.
 func extractComment(re *syntax.Regexp) string {
 	for _, sub := range re.Sub {
+		subStr := sub.String()
+		if strings.HasPrefix(subStr, "#") {
+			return strings.TrimSpace(strings.TrimPrefix(sub.String(), "#"))
+		}
 		if len(sub.Sub) > 0 {
 			if comment := extractComment(sub); comment != "" {
 				return comment
 			}
-		}
-		subStr := sub.String()
-		if strings.HasPrefix(subStr, "#") {
-			return strings.TrimSpace(strings.TrimPrefix(subStr, "#"))
 		}
 	}
 	return ""
