@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.12
+      - image: cimg/go:1.17.7
     steps:
       - checkout
       - run: sudo apt-get -y -qq install python python-pip

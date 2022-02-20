@@ -1,1 +1,3 @@
-linters: {}
+linters:
+  enable:
+    - prealloc
