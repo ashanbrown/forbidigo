@@ -16,6 +16,7 @@ import (
 
 type Issue interface {
 	Details() string
+	Pos() token.Pos
 	Position() token.Position
 	String() string
 }
@@ -23,6 +24,7 @@ type Issue interface {
 type UsedIssue struct {
 	identifier string
 	pattern    string
+	pos        token.Pos
 	position   token.Position
 	customMsg  string
 }
@@ -37,6 +39,10 @@ func (a UsedIssue) Details() string {
 
 func (a UsedIssue) Position() token.Position {
 	return a.position
+}
+
+func (a UsedIssue) Pos() token.Pos {
+	return a.pos
 }
 
 func (a UsedIssue) String() string { return toString(a) }
@@ -96,7 +102,7 @@ type visitor struct {
 }
 
 func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
-	var issues []Issue //nolint:prealloc // we don't know how many there will be
+	var issues []Issue 
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
 		isTestFile := false
@@ -167,6 +173,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 			v.issues = append(v.issues, UsedIssue{
 				identifier: v.textFor(node),
 				pattern:    p.pattern.String(),
+				pos:        node.Pos(),
 				position:   v.fset.Position(node.Pos()),
 				customMsg:  p.msg,
 			})
@@ -188,7 +195,7 @@ func (v *visitor) permit(node ast.Node) bool {
 		return false
 	}
 	nodePos := v.fset.Position(node.Pos())
-	var nolint = regexp.MustCompile(fmt.Sprintf(`^//\s?permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
+	nolint := regexp.MustCompile(fmt.Sprintf(`^//\s?permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
 	for _, c := range v.comments {
 		commentPos := v.fset.Position(c.Pos())
 		if commentPos.Line == nodePos.Line && len(c.List) > 0 && nolint.MatchString(c.List[0].Text) {

@@ -3,10 +3,10 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.12
+      - image: cimg/go:1.17.7
     steps:
       - checkout
-      - run: sudo apt-get -y -qq install python python-pip
+      - run: sudo apt-get update && sudo apt-get -y -qq install python pip
       - run: pip install pre-commit
       - run: SKIP=no-commit-to-branch pre-commit run -a
       - run: go test ./...

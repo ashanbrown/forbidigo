@@ -1,2 +1,3 @@
 linters:
-  enable-all: true
+  enable:
+    - prealloc
