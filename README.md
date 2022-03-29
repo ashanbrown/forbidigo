@@ -29,6 +29,7 @@ Note that the linter has no knowledge of what packages were actually imported, s
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
 - **-exclude_godoc_examples** (default true) - Controls whether godoc examples are identified and excluded
+- **-tests** (default true) - Controls whether tests are included
 
 ## Purpose
 

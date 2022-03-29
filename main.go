@@ -14,10 +14,11 @@ func main() {
 	log.SetFlags(0) // remove log timestamp
 
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
+	includeTests := flag.Bool("tests", true, "Include tests")
 	excludeGodocExamples := flag.Bool("exclude_godoc_examples", true, "Exclude code in godoc examples")
 	flag.Parse()
 
-	patterns := forbidigo.DefaultPatterns()
+	var patterns = []string(nil)
 
 	firstPkg := 0
 	for n, arg := range flag.Args() {
@@ -28,8 +29,13 @@ func main() {
 		patterns = append(patterns, arg)
 	}
 
+	if patterns == nil {
+		patterns = forbidigo.DefaultPatterns()
+	}
+
 	cfg := packages.Config{
-		Mode: packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
+		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
+		Tests: *includeTests,
 	}
 	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
 	if err != nil {
@@ -43,7 +49,7 @@ func main() {
 		log.Fatalf("Could not create linter: %s", err)
 	}
 
-	var issues []forbidigo.Issue 
+	var issues []forbidigo.Issue
 	for _, p := range pkgs {
 		nodes := make([]ast.Node, 0, len(p.Syntax))
 		for _, n := range p.Syntax {
