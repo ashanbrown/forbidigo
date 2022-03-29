@@ -1,0 +1,4 @@
+CURDIR/examples/example.go:6:2: use of `fmt.Println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$`
+CURDIR/examples/example.go:8:2: use of `print` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$`
+CURDIR/examples/example.go:9:2: use of `println` forbidden by pattern `^(fmt\.Print(|f|ln)|print|println)$`
+exit status 3
