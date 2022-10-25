@@ -9,9 +9,10 @@ import (
 
 func TestParseValidPatterns(t *testing.T) {
 	for _, tc := range []struct {
-		name            string
-		ptrn            string
-		expectedComment string
+		name                 string
+		ptrn                 string
+		expectedComment      string
+		expectedMatchPackage bool
 	}{
 		{
 			name: "simple expression, no comment",
@@ -41,12 +42,18 @@ func TestParseValidPatterns(t *testing.T) {
 			ptrn:            `^fmt\.Println(# Please don't use this!)?$`,
 			expectedComment: "Please don't use this!",
 		},
+		{
+			name:                 "match package with non-empty group",
+			ptrn:                 `^(?P<pkg>fmt).Println$`,
+			expectedMatchPackage: true,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ptrn, err := parse(tc.ptrn)
 			require.Nil(t, err)
 			assert.Equal(t, tc.ptrn, ptrn.pattern.String())
 			assert.Equal(t, tc.expectedComment, ptrn.msg)
+			assert.Equal(t, tc.expectedMatchPackage, ptrn.matchPackage, "match pattern")
 		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"log"
 	"regexp"
 	"strings"
@@ -97,12 +98,13 @@ type visitor struct {
 	linter   *Linter
 	comments []*ast.CommentGroup
 
-	fset   *token.FileSet
-	issues []Issue
+	fset      *token.FileSet
+	typesInfo *types.Info
+	issues    []Issue
 }
 
-func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
-	var issues []Issue 
+func (l *Linter) Run(fset *token.FileSet, typesInfo *types.Info, nodes ...ast.Node) ([]Issue, error) {
+	var issues []Issue
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
 		isTestFile := false
@@ -146,6 +148,7 @@ func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 			isTestFile: isTestFile,
 			linter:     l,
 			fset:       fset,
+			typesInfo:  typesInfo,
 			comments:   comments,
 		}
 		ast.Walk(&visitor, node)
@@ -155,6 +158,7 @@ func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 }
 
 func (v *visitor) Visit(node ast.Node) ast.Visitor {
+	var selectorExpr *ast.SelectorExpr
 	switch node := node.(type) {
 	case *ast.FuncDecl:
 		// don't descend into godoc examples if we are ignoring them
@@ -164,14 +168,54 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 		}
 		return v
 	case *ast.SelectorExpr:
+		selectorExpr = node
 	case *ast.Ident:
 	default:
 		return v
 	}
+
+	// The text as it appears in the source is always used because issues
+	// use that. The other texts to match against are extracted when needed
+	// by a pattern.
+	srcText := v.textFor(node)
+	pkgText := ""
 	for _, p := range v.linter.patterns {
-		if p.pattern.MatchString(v.textFor(node)) && !v.permit(node) {
+		if p.matchPackage && pkgText == "" {
+			if selectorExpr == nil {
+				// Not a selector at all.
+				continue
+			}
+			selector := selectorExpr.X
+			ident, ok := selector.(*ast.Ident)
+			if !ok {
+				// Not an identifier.
+				continue
+			}
+			object, ok := v.typesInfo.Uses[ident]
+			if !ok {
+				// No information about the identifier. Should
+				// not happen, but perhaps there were compile
+				// errors?
+				continue
+			}
+			pkgName, ok := object.(*types.PkgName)
+			if !ok {
+				// No package name, cannot match.
+				continue
+			}
+			pkgText = pkgName.Imported().Path() + "." + selectorExpr.Sel.Name
+		}
+
+		matchText := ""
+		switch {
+		case p.matchPackage:
+			matchText = pkgText
+		default:
+			matchText = srcText
+		}
+		if p.pattern.MatchString(matchText) && !v.permit(node) {
 			v.issues = append(v.issues, UsedIssue{
-				identifier: v.textFor(node),
+				identifier: srcText, // Always report the expression as it appears in the source code.
 				pattern:    p.pattern.String(),
 				pos:        node.Pos(),
 				position:   v.fset.Position(node.Pos()),
@@ -182,6 +226,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	return nil
 }
 
+// textFor returns the function as it appears in the source code (= <importname>.<function name>).
 func (v *visitor) textFor(node ast.Node) string {
 	buf := new(bytes.Buffer)
 	if err := printer.Fprint(buf, v.fset, node); err != nil {

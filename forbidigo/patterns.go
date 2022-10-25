@@ -8,8 +8,9 @@ import (
 )
 
 type pattern struct {
-	pattern *regexp.Regexp
-	msg     string
+	pattern      *regexp.Regexp
+	msg          string
+	matchPackage bool
 }
 
 func parse(ptrn string) (*pattern, error) {
@@ -22,7 +23,14 @@ func parse(ptrn string) (*pattern, error) {
 		return nil, fmt.Errorf("unable to parse pattern `%s`: %s", ptrn, err)
 	}
 	msg := extractComment(re)
-	return &pattern{pattern: ptrnRe, msg: msg}, nil
+	matchPackage := false
+	for _, groupName := range ptrnRe.SubexpNames() {
+		switch groupName {
+		case "pkg":
+			matchPackage = true
+		}
+	}
+	return &pattern{pattern: ptrnRe, msg: msg, matchPackage: matchPackage}, nil
 }
 
 // Traverse the leaf submatches in the regex tree and extract a comment, if any

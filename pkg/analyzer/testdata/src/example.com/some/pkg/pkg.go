@@ -1,0 +1,4 @@
+package pkg
+
+func Forbidden() {
+}
