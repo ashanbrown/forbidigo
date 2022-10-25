@@ -41,6 +41,7 @@ func NewAnalyzer() *analysis.Analyzer {
 		usePermitDirective: true,
 		includeExamples:    true,
 	}
+
 	flags.Var(&listVar{values: &a.patterns}, "p", "pattern")
 	flags.BoolVar(&a.includeExamples, "examples", false, "check godoc examples")
 	flags.BoolVar(&a.usePermitDirective, "permit", true, `when set, lines with "//permit" directives will be ignored`)
@@ -67,7 +68,7 @@ func (a *analyzer) runAnalysis(pass *analysis.Pass) (interface{}, error) {
 	for _, f := range pass.Files {
 		nodes = append(nodes, f)
 	}
-	issues, err := linter.Run(pass.Fset, nodes...)
+	issues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: pass.Fset, TypesInfo: pass.TypesInfo}, nodes...)
 	if err != nil {
 		return nil, err
 	}

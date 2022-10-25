@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"log"
 	"regexp"
 	"strings"
@@ -97,19 +98,37 @@ type visitor struct {
 	linter   *Linter
 	comments []*ast.CommentGroup
 
-	fset   *token.FileSet
-	issues []Issue
+	runConfig RunConfig
+	issues    []Issue
 }
 
+// Deprecated: Run was the original entrypoint before RunWithConfig was introduced to support
+// additional match patterns that need additional information.
 func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
-	var issues []Issue 
+	return l.RunWithConfig(RunConfig{Fset: fset}, nodes...)
+}
+
+// RunConfig provides information that the linter needs for different kinds
+// of match patterns. Ideally, all fields should get set. More fields may get
+// added in the future as needed.
+type RunConfig struct {
+	// FSet is required.
+	Fset *token.FileSet
+
+	// TypesInfo is needed for "pkg" match patterns. Not providing it
+	// disables those patterns.
+	TypesInfo *types.Info
+}
+
+func (l *Linter) RunWithConfig(config RunConfig, nodes ...ast.Node) ([]Issue, error) {
+	var issues []Issue
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
 		isTestFile := false
 		isWholeFileExample := false
 		if file, ok := node.(*ast.File); ok {
 			comments = file.Comments
-			fileName := fset.Position(file.Pos()).Filename
+			fileName := config.Fset.Position(file.Pos()).Filename
 			isTestFile = strings.HasSuffix(fileName, "_test.go")
 
 			// From https://blog.golang.org/examples, a "whole file example" is:
@@ -145,7 +164,7 @@ func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 			cfg:        l.cfg,
 			isTestFile: isTestFile,
 			linter:     l,
-			fset:       fset,
+			runConfig:  config,
 			comments:   comments,
 		}
 		ast.Walk(&visitor, node)
@@ -163,18 +182,43 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 			return nil
 		}
 		return v
+	// The following two are handled below.
 	case *ast.SelectorExpr:
 	case *ast.Ident:
+	// Everything else isn't.
 	default:
 		return v
 	}
+
+	// The text as it appears in the source is always used because issues
+	// use that. The other texts to match against are extracted when needed
+	// by a pattern. They are nil when not evaluated yet and point to
+	// the empty string when there is nothing to match against.
+	srcText := v.textFor(node)
+	var pkgText *string
+	checkedPkgText := false
 	for _, p := range v.linter.patterns {
-		if p.pattern.MatchString(v.textFor(node)) && !v.permit(node) {
+		if p.matchWithPackage && !checkedPkgText {
+			pkgText = v.pkgTextFor(node)
+			checkedPkgText = true
+		}
+
+		matchText := ""
+		switch {
+		case p.matchWithPackage:
+			if pkgText == nil {
+				continue
+			}
+			matchText = *pkgText
+		default:
+			matchText = srcText
+		}
+		if p.pattern.MatchString(matchText) && !v.permit(node) {
 			v.issues = append(v.issues, UsedIssue{
-				identifier: v.textFor(node),
+				identifier: srcText, // Always report the expression as it appears in the source code.
 				pattern:    p.pattern.String(),
 				pos:        node.Pos(),
-				position:   v.fset.Position(node.Pos()),
+				position:   v.runConfig.Fset.Position(node.Pos()),
 				customMsg:  p.msg,
 			})
 		}
@@ -182,22 +226,69 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	return nil
 }
 
+// textFor returns the expression as it appears in the source code (for
+// example, <importname>.<function name>).
 func (v *visitor) textFor(node ast.Node) string {
 	buf := new(bytes.Buffer)
-	if err := printer.Fprint(buf, v.fset, node); err != nil {
-		log.Fatalf("ERROR: unable to print node at %s: %s", v.fset.Position(node.Pos()), err)
+	if err := printer.Fprint(buf, v.runConfig.Fset, node); err != nil {
+		log.Fatalf("ERROR: unable to print node at %s: %s", v.runConfig.Fset.Position(node.Pos()), err)
 	}
 	return buf.String()
+}
+
+// pkgTextFor expands the selector in a selector expression to the full package
+// name and (for variables) the type:
+//
+// - example.com/some/pkg.Function
+// - example.com/some/pkg.CustomType.Method
+//
+// It returns nil when the text is not available, otherwise a pointer to
+// the string to match against.
+func (v *visitor) pkgTextFor(node ast.Node) *string {
+	if v.runConfig.TypesInfo == nil {
+		return nil
+	}
+	selectorExpr, ok := node.(*ast.SelectorExpr)
+	if !ok {
+		return nil
+	}
+	selector := selectorExpr.X
+	ident, ok := selector.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	object, ok := v.runConfig.TypesInfo.Uses[ident]
+	if !ok {
+		// No information about the identifier. Should
+		// not happen, but perhaps there were compile
+		// errors?
+		return nil
+	}
+	var pkgText string
+	switch object := object.(type) {
+	case *types.PkgName:
+		pkgText = object.Imported().Path()
+	case *types.Var:
+		pkgText = object.Type().String()
+		// Ignore whether it is a pointer.
+		pkgText = strings.TrimLeft(pkgText, "*")
+	default:
+		// Something else?
+		return nil
+	}
+
+	pkgText += "." + selectorExpr.Sel.Name
+	return &pkgText
 }
 
 func (v *visitor) permit(node ast.Node) bool {
 	if v.cfg.IgnorePermitDirectives {
 		return false
 	}
-	nodePos := v.fset.Position(node.Pos())
+	nodePos := v.runConfig.Fset.Position(node.Pos())
 	nolint := regexp.MustCompile(fmt.Sprintf(`^//\s?permit:%s\b`, regexp.QuoteMeta(v.textFor(node))))
 	for _, c := range v.comments {
-		commentPos := v.fset.Position(c.Pos())
+		commentPos := v.runConfig.Fset.Position(c.Pos())
 		if commentPos.Line == nodePos.Line && len(c.List) > 0 && nolint.MatchString(c.List[0].Text) {
 			return true
 		}

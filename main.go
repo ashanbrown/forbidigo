@@ -34,7 +34,7 @@ func main() {
 	}
 
 	cfg := packages.Config{
-		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
+		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps,
 		Tests: *includeTests,
 	}
 	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
@@ -55,7 +55,7 @@ func main() {
 		for _, n := range p.Syntax {
 			nodes = append(nodes, n)
 		}
-		newIssues, err := linter.Run(p.Fset, nodes...)
+		newIssues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo}, nodes...)
 		if err != nil {
 			log.Fatalf("failed: %s", err)
 		}

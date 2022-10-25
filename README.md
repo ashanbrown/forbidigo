@@ -16,15 +16,36 @@ If no patterns are specified, the default pattern of `^(fmt\.Print.*|print|print
 functions (and whole files), that are identifies as Godoc examples (https://blog.golang.org/examples) are excluded from 
 checking.
 
+By default, patterns get matched against the actual expression as it appears in
+the source code. The effect is that ``^fmt\.Print.*$` will not match when that
+package gets imported with `import fmt2 "fmt"` and then the function gets
+called with `fmt2.Print`.
+
+This makes it hard to match packages that may get imported under a variety of
+different names, for example because there is no established convention or the
+name is so generic that import aliases have to be used. To solve this, a
+package that contains a subgroup literally called `pkg` (`(?P<pkg>...)`) will be
+matched against text where the import name got replaced with the full package
+name (e.g. `example.com/some/pkg`) if such a substitution is possible for the
+current expression. Otherwise such a pattern is ignored.
+
+In addition, `pkg` enables matching against the canonical type name (which
+includes the full package name) of a variable in a selector expression and thus
+can be used to forbid the usage of certain methods or fields: instead of
+matching against `somevariable.Method`, the rule will be matched against
+`example.com/some/pkg.SomeType.Method` when `somevariable` is a variable of
+that type or a pointer to it. When a type is an alias for a type in some other
+package, the name of that other package will be matched against.
+
 A larger set of interesting patterns might include:
 
-* `^fmt\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
-* `^fmt\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
-* `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
-* `^spew\.Dump$` -- forbid dumping detailed data to stdout
-* `^fmt\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
+* `^(?P<pkg>fmt)\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
+* `^(?P<pkg>fmt)\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
+* `^(?P<pkg>github.com/onsi/ginkgo(/v[[:digit:]]*)?)\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
+* `^(?P<pkg>github.com/davecgh/go-spew/spew)\.Dump$` -- forbid dumping detailed data to stdout
+* `^(?P<pkg>github.com/davecgh/go-spew/spew.ConfigState)\.Dump` -- also forbid it via a `ConfigState`
+* `^(?P<pkg>fmt)\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
 
-Note that the linter has no knowledge of what packages were actually imported, so aliased imports will match these patterns.
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
