@@ -58,7 +58,7 @@ type Linter struct {
 }
 
 func DefaultPatterns() []string {
-	return []string{`^(fmt\.Print(|f|ln)|print|println)$`}
+	return []string{`^(?P<pkg>fmt)\.Print(|f|ln)$`, `^(print|println)$`}
 }
 
 //go:generate go-options config

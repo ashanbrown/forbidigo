@@ -11,9 +11,9 @@ import (
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"
 	fmt.Printf("this is ok") //permit:fmt.Printf // this is ok
-	print("not ok")          // want "forbidden by pattern"
-	println("also not ok")   // want "forbidden by pattern"
-	alias.Println("hello")   // not matched by default pattern fmt.Println
+	print("not ok")          // want "use of .print. forbidden by pattern .*print.println"
+	println("also not ok")   // want "use of .println. forbidden by pattern .*print.println"
+	alias.Println("hello")   // want "forbidden by pattern"
 	somepkg.Forbidden()      // want "somepkg.Forbidden.*forbidden by pattern .*example.com/some/pkg.*Forbidden"
 
 	c := somepkg.CustomType{}
@@ -32,5 +32,5 @@ func Bar() string {
 	fmt := struct {
 		Println string
 	}{}
-	return fmt.Println // want "forbidden by pattern"
+	return fmt.Println // not the fmt package, not matched
 }
