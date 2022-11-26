@@ -103,7 +103,8 @@ type visitor struct {
 	issues    []Issue
 }
 
-// Deprecated: Use RunWithTypes
+// Deprecated: Run was the original entrypoint before RunWithTypes was introduced to support matching
+// full package names.
 func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
 	return l.RunWithTypes(fset, nil, nodes...)
 }
