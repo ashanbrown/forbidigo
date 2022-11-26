@@ -68,7 +68,7 @@ func (a *analyzer) runAnalysis(pass *analysis.Pass) (interface{}, error) {
 	for _, f := range pass.Files {
 		nodes = append(nodes, f)
 	}
-	issues, err := linter.Run(pass.Fset, pass.TypesInfo, nodes...)
+	issues, err := linter.RunWithTypes(pass.Fset, pass.TypesInfo, nodes...)
 	if err != nil {
 		return nil, err
 	}

@@ -12,7 +12,7 @@
 
     forbidigo [flags...] patterns... -- packages...
 
-If no patterns are specified, the default pattern of `^((?P<pkg>fmt)\.Print.*|print|println)$` is used to eliminate debug statements.  By default,
+If no patterns are specified, the default patterns of `^(P<pkg>fmt)\.Print(|f|ln)$` and `^(print|println)$` are used to eliminate debug statements.  By default,
 functions (and whole files), that are identifies as Godoc examples (https://blog.golang.org/examples) are excluded from 
 checking.
 

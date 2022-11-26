@@ -58,7 +58,7 @@ type Linter struct {
 }
 
 func DefaultPatterns() []string {
-	return []string{`^((?P<pkg>fmt)\.Print(|f|ln)|print|println)$`}
+	return []string{`^(?P<pkg>fmt)\.Print(|f|ln)$`, `^(print|println)$`}
 }
 
 //go:generate go-options config
@@ -103,7 +103,12 @@ type visitor struct {
 	issues    []Issue
 }
 
-func (l *Linter) Run(fset *token.FileSet, typesInfo *types.Info, nodes ...ast.Node) ([]Issue, error) {
+// Deprecated: Use RunWithTypes
+func (l *Linter) Run(fset *token.FileSet, nodes ...ast.Node) ([]Issue, error) {
+	return l.RunWithTypes(fset, nil, nodes...)
+}
+
+func (l *Linter) RunWithTypes(fset *token.FileSet, typesInfo *types.Info, nodes ...ast.Node) ([]Issue, error) {
 	var issues []Issue
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
@@ -181,6 +186,9 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	pkgText := ""
 	for _, p := range v.linter.patterns {
 		if p.matchPackage && pkgText == "" {
+			if v.typesInfo == nil {
+				continue
+			}
 			if selectorExpr == nil {
 				// Not a selector at all.
 				continue

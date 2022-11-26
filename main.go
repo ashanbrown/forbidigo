@@ -34,7 +34,7 @@ func main() {
 	}
 
 	cfg := packages.Config{
-		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps,
+		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes | packages.NeedTypesInfo,
 		Tests: *includeTests,
 	}
 	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
@@ -48,21 +48,20 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not create linter: %s", err)
 	}
+
 	var issues []forbidigo.Issue
 	for _, p := range pkgs {
 		nodes := make([]ast.Node, 0, len(p.Syntax))
 		for _, n := range p.Syntax {
 			nodes = append(nodes, n)
 		}
-		newIssues, err := linter.Run(p.Fset, p.TypesInfo, nodes...)
+		newIssues, err := linter.RunWithTypes(p.Fset, p.TypesInfo, nodes...)
 		if err != nil {
 			log.Fatalf("failed: %s", err)
 		}
 		issues = append(issues, newIssues...)
 	}
-	if err != nil {
-		log.Fatalf("failed: %s", err)
-	}
+
 	for _, issue := range issues {
 		log.Println(issue)
 	}
