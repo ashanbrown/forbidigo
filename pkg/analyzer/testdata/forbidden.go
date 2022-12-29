@@ -8,6 +8,12 @@ import (
 	somepkg "example.com/some/pkg"
 )
 
+func myCustom() somepkg.CustomType {
+	return somepkg.CustomType{}
+}
+
+var myCustomFunc = myCustom
+
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"
 	fmt.Printf("this is ok") //permit:fmt.Printf // this is ok
@@ -18,6 +24,15 @@ func Foo() {
 
 	c := somepkg.CustomType{}
 	c.AlsoForbidden() // want "c.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+
+	// Selector expression with result of function call in package.
+	somepkg.NewCustom().AlsoForbidden() // want "somepkg.NewCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+
+	// Selector expression with result of normal function call.
+	myCustom().AlsoForbidden() // want "myCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+
+	// Selector expression with result of normal function call.
+	myCustomFunc().AlsoForbidden() // want "myCustomFunc...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
 
 	// Type alias and pointer.
 	c2 := &anotherpkg.CustomType{}

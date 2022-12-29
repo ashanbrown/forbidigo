@@ -253,27 +253,67 @@ func (v *visitor) pkgTextFor(node ast.Node) *string {
 		return nil
 	}
 	selector := selectorExpr.X
-	ident, ok := selector.(*ast.Ident)
-	if !ok {
-		return nil
-	}
-	object, ok := v.runConfig.TypesInfo.Uses[ident]
-	if !ok {
-		// No information about the identifier. Should
-		// not happen, but perhaps there were compile
-		// errors?
-		return nil
-	}
 	var pkgText string
-	switch object := object.(type) {
-	case *types.PkgName:
-		pkgText = object.Imported().Path()
-	case *types.Var:
-		pkgText = object.Type().String()
-		// Ignore whether it is a pointer.
-		pkgText = strings.TrimLeft(pkgText, "*")
+	switch selector := selector.(type) {
+	case *ast.Ident:
+		object, ok := v.runConfig.TypesInfo.Uses[selector]
+		if !ok {
+			// No information about the identifier. Should
+			// not happen, but perhaps there were compile
+			// errors?
+			return nil
+		}
+		switch object := object.(type) {
+		case *types.PkgName:
+			pkgText = object.Imported().Path()
+		case *types.Var:
+			pkgText = object.Type().String()
+			// Ignore whether it is a pointer.
+			pkgText = strings.TrimLeft(pkgText, "*")
+		default:
+			// Something else?
+			return nil
+		}
+	case *ast.CallExpr:
+		var object types.Object
+		switch fun := selector.Fun.(type) {
+		case *ast.SelectorExpr:
+			o, ok := v.runConfig.TypesInfo.Uses[fun.Sel]
+			if !ok {
+				// No information about the identifier. Should
+				// not happen, but perhaps there were compile
+				// errors?
+				return nil
+			}
+			object = o
+		case *ast.Ident:
+			o, ok := v.runConfig.TypesInfo.Uses[fun]
+			if !ok {
+				// No information about the identifier. Should
+				// not happen, but perhaps there were compile
+				// errors?
+				return nil
+			}
+			object = o
+		default:
+			return nil
+		}
+		typ := object.Type()
+		signature, ok := typ.(*types.Signature)
+		if !ok {
+			// Shouldn't happen. We are looking at the type
+			// of a function call.
+			return nil
+		}
+		results := signature.Results()
+		if results.Len() != 1 {
+			// Shouldn't happen because the result is used
+			// as selector.
+			return nil
+		}
+		result := results.At(0)
+		pkgText = result.Type().String()
 	default:
-		// Something else?
 		return nil
 	}
 
