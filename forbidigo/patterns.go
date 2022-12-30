@@ -56,12 +56,13 @@ func (p *YAMLPattern) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 var _ yaml.Unmarshaler = &YAMLPattern{}
 
-// parse accepts a regular expression or, if the string starts with {, a
+// parse accepts a regular expression or, if the string starts with { or contains a line break, a
 // JSON or YAML representation of a Pattern.
 func parse(ptrn string) (*Pattern, error) {
 	pattern := &Pattern{}
 
-	if strings.HasPrefix(strings.TrimSpace(ptrn), "{") {
+	if strings.HasPrefix(strings.TrimSpace(ptrn), "{") ||
+		strings.Contains(ptrn, "\n") {
 		// Embedded JSON or YAML. We can decode both with the YAML decoder.
 		if err := yaml.UnmarshalStrict([]byte(ptrn), pattern); err != nil {
 			return nil, fmt.Errorf("parsing as JSON or YAML failed: %v", err)

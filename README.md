@@ -54,9 +54,9 @@ A pattern with `Match: type` only matches selector expressions
      cf.Dump() // -> github.com/davecgh/go-spew/spew.ConfigState.Dump
 
 To distinguish such patterns from traditional regular expression patterns, the
-encoding must start with a `{`. When using just JSON encoding, backslashes must
-get quoted inside strings. When using YAML, this isn't necessary. The following
-pattern strings are equivalent:
+encoding must start with a `{` or contain line breaks. When using just JSON
+encoding, backslashes must get quoted inside strings. When using YAML, this
+isn't necessary. The following pattern strings are equivalent:
 
     {Match: "type", Pattern: "^fmt\\.Println$"}
 
@@ -65,6 +65,9 @@ pattern strings are equivalent:
     }
 
     {Match: type, Pattern: ^fmt\.Println$}
+
+    Match: type
+    Pattern: ^fmt\.Println$
 
 A larger set of interesting patterns might include:
 

@@ -64,6 +64,13 @@ Pattern: ^fmt\.Println$
 			expectedMatch:   MatchType,
 			expectedPattern: `^fmt\.Println$`,
 		},
+		{
+			name: "simple YAML",
+			ptrn: `Match: type
+Pattern: ^fmt\.Println$`,
+			expectedMatch:   MatchType,
+			expectedPattern: `^fmt\.Println$`,
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ptrn, err := parse(tc.ptrn)
