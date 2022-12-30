@@ -14,6 +14,14 @@ func myCustom() somepkg.CustomType {
 
 var myCustomFunc = myCustom
 
+type myCustomStruct struct {
+	somepkg.CustomType
+}
+
+type myCustomInterface interface {
+	AlsoForbidden()
+}
+
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"
 	fmt.Printf("this is ok") //permit:fmt.Printf // this is ok
@@ -41,6 +49,13 @@ func Foo() {
 	// Interface.
 	var ci somepkg.CustomInterface
 	ci.StillForbidden() // want "ci.StillForbidden.*forbidden by pattern.*example.com/some/pkg.CustomInterface.*StillForbidden"
+
+	// Struct embedded inside another - not handled!
+	myCustomStruct{}.AlsoForbidden()
+
+	// Forbidden method called via interface - not handled!
+	var ci2 myCustomInterface = somepkg.CustomType{}
+	ci2.AlsoForbidden()
 }
 
 func Bar() string {
