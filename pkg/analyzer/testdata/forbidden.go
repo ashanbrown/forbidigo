@@ -22,6 +22,8 @@ type myCustomInterface interface {
 	AlsoForbidden()
 }
 
+var forbiddenFunctionRef = somepkg.Forbidden // want "somepkg.Forbidden.*forbidden by pattern .*example.com/some/pkg.*Forbidden"
+
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"
 	fmt.Printf("this is ok") //permit:fmt.Printf // this is ok
