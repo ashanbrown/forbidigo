@@ -32,21 +32,30 @@ func main() {
 	if patterns == nil {
 		patterns = forbidigo.DefaultPatterns()
 	}
-
-	cfg := packages.Config{
-		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps,
-		Tests: *includeTests,
-	}
-	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
-	if err != nil {
-		log.Fatalf("Could not load packages: %s", err)
-	}
 	options := []forbidigo.Option{
 		forbidigo.OptionExcludeGodocExamples(*excludeGodocExamples),
 	}
 	linter, err := forbidigo.NewLinter(patterns, options...)
 	if err != nil {
 		log.Fatalf("Could not create linter: %s", err)
+	}
+
+	cfg := packages.Config{
+		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
+		Tests: *includeTests,
+	}
+
+	// Additional information may be needed for some patterns.
+	for _, pattern := range linter.Patterns() {
+		switch pattern.Match {
+		case forbidigo.MatchType:
+			cfg.Mode |= packages.NeedTypesInfo | packages.NeedDeps
+		}
+	}
+
+	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
+	if err != nil {
+		log.Fatalf("Could not load packages: %s", err)
 	}
 
 	var issues []forbidigo.Issue

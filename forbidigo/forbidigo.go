@@ -120,6 +120,11 @@ type RunConfig struct {
 	TypesInfo *types.Info
 }
 
+// Patterns returns the parsed patterns.
+func (l *Linter) Patterns() []*Pattern {
+	return l.patterns
+}
+
 func (l *Linter) RunWithConfig(config RunConfig, nodes ...ast.Node) ([]Issue, error) {
 	var issues []Issue
 	for _, node := range nodes {
