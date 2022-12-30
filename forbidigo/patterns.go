@@ -5,20 +5,45 @@ import (
 	"regexp"
 	"regexp/syntax"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
-type pattern struct {
-	pattern *regexp.Regexp
-	msg     string
+const (
+	MatchText = "text"
+	MatchType = "type"
+)
 
-	// matchWithPackage is set for rules against selector expressions where
-	// the selector name gets replaced by the full package name (for
-	// imports) or the type including the package (for variables) before
-	// checking for a match.
-	matchWithPackage bool
+// Pattern matches code that is not supposed to be used.
+type Pattern struct {
+	re *regexp.Regexp
+
+	// Pattern is the regular expression string that is used for matching.
+	Pattern string `yaml:"Pattern"`
+
+	// Match defines whether the regular expression is matched against the
+	// source code literally ("text", the default) or whether type
+	// information is used to determine what is being referenced ("type").
+	Match string `yaml:"Match"`
+
+	// Msg gets printed in addition to the normal message if a match is
+	// found.
+	Msg string `yaml:"Msg"`
 }
 
-func parse(ptrn string) (*pattern, error) {
+// parse accepts a regular expression or, if the string starts with {, a
+// JSON or YAML representation of a Pattern.
+func parse(ptrn string) (*Pattern, error) {
+	pattern := &Pattern{}
+
+	if strings.HasPrefix(strings.TrimSpace(ptrn), "{") {
+		// Embedded JSON or YAML. We can decode both with the YAML decoder.
+		if err := yaml.UnmarshalStrict([]byte(ptrn), pattern); err != nil {
+			return nil, fmt.Errorf("parsing as JSON or YAML failed: %v", err)
+		}
+		ptrn = pattern.Pattern
+	}
+
 	ptrnRe, err := regexp.Compile(ptrn)
 	if err != nil {
 		return nil, fmt.Errorf("unable to compile pattern `%s`: %s", ptrn, err)
@@ -28,14 +53,22 @@ func parse(ptrn string) (*pattern, error) {
 		return nil, fmt.Errorf("unable to parse pattern `%s`: %s", ptrn, err)
 	}
 	msg := extractComment(re)
-	matchWithPackage := false
-	for _, groupName := range ptrnRe.SubexpNames() {
-		switch groupName {
-		case "pkg":
-			matchWithPackage = true
-		}
+	if msg != "" {
+		pattern.Msg = msg
 	}
-	return &pattern{pattern: ptrnRe, msg: msg, matchWithPackage: matchWithPackage}, nil
+	pattern.re = ptrnRe
+	if pattern.Match == "" {
+		pattern.Match = MatchText
+	}
+
+	switch pattern.Match {
+	case MatchText, MatchType:
+		// okay
+	default:
+		return nil, fmt.Errorf("unsupported match string: %q", pattern.Match)
+	}
+
+	return pattern, nil
 }
 
 // Traverse the leaf submatches in the regex tree and extract a comment, if any

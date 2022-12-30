@@ -9,10 +9,11 @@ import (
 
 func TestParseValidPatterns(t *testing.T) {
 	for _, tc := range []struct {
-		name                 string
-		ptrn                 string
-		expectedComment      string
-		expectedMatchPackage bool
+		name            string
+		ptrn            string
+		expectedComment string
+		expectedMatch   string
+		expectedPattern string
 	}{
 		{
 			name: "simple expression, no comment",
@@ -43,17 +44,40 @@ func TestParseValidPatterns(t *testing.T) {
 			expectedComment: "Please don't use this!",
 		},
 		{
-			name:                 "match package with non-empty group",
-			ptrn:                 `^(?P<pkg>fmt).Println$`,
-			expectedMatchPackage: true,
+			name:            "match import",
+			ptrn:            `{Match: "type", Pattern: "^fmt\\.Println$"}`,
+			expectedMatch:   MatchType,
+			expectedPattern: `^fmt\.Println$`,
+		},
+		{
+			name: "match import with YAML",
+			ptrn: `{Match: type,
+Pattern: ^fmt\.Println$
+}`,
+			expectedMatch:   MatchType,
+			expectedPattern: `^fmt\.Println$`,
+		},
+		{
+			name:            "match import with YAML, no line breaks",
+			ptrn:            `{Match: type, Pattern: ^fmt\.Println$}`,
+			expectedMatch:   MatchType,
+			expectedPattern: `^fmt\.Println$`,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ptrn, err := parse(tc.ptrn)
 			require.Nil(t, err)
-			assert.Equal(t, tc.ptrn, ptrn.pattern.String())
-			assert.Equal(t, tc.expectedComment, ptrn.msg)
-			assert.Equal(t, tc.expectedMatchPackage, ptrn.matchWithPackage, "match pattern")
+			expectedPattern := tc.expectedPattern
+			if expectedPattern == "" {
+				expectedPattern = tc.ptrn
+			}
+			assert.Equal(t, expectedPattern, ptrn.re.String(), "pattern")
+			assert.Equal(t, tc.expectedComment, ptrn.Msg, "comment")
+			expectedMatch := tc.expectedMatch
+			if expectedMatch == "" {
+				expectedMatch = MatchText
+			}
+			assert.Equal(t, expectedMatch, ptrn.Match, "match ")
 		})
 	}
 }

@@ -23,29 +23,61 @@ called with `fmt2.Print`.
 
 This makes it hard to match packages that may get imported under a variety of
 different names, for example because there is no established convention or the
-name is so generic that import aliases have to be used. To solve this, a
-package that contains a subgroup literally called `pkg` (`(?P<pkg>...)`) will be
-matched against text where the import name got replaced with the full package
-name (e.g. `example.com/some/pkg`) if such a substitution is possible for the
-current expression. Otherwise such a pattern is ignored.
+name is so generic that import aliases have to be used. To solve this,
+forbidigo also supports more complex patterns. Such patterns are strings that
+contain JSON or YAML for a struct.
 
-In addition, `pkg` enables matching against the canonical type name (which
-includes the full package name) of a variable in a selector expression and thus
-can be used to forbid the usage of certain methods or fields: instead of
-matching against `somevariable.Method`, the rule will be matched against
-`example.com/some/pkg.SomeType.Method` when `somevariable` is a variable of
-that type or a pointer to it. When a type is an alias for a type in some other
-package, the name of that other package will be matched against.
+The full pattern struct has the following fields:
+
+* `Msg`: an additional comment that gets added to the error message when a
+  pattern matches.
+* `Pattern`: the regular expression itself.
+* `Match`: a string which defines what the regular expression is matched
+  against. Valid values are:
+  * `text`: the traditional, literal source code match.
+  * `type`: a semantic match that uses type information to enable precise
+    matches against what is being used (a function in a certain package, or a
+    method in a certain type) instead of how that thing is called in the source
+    code.
+
+A pattern with `Match: type` only matches selector expressions
+(`<some>.<thing>`). Those expressions get expanded as follows:
+
+* An imported package gets replaced with the full package path, including the
+  version if there is one. Example: `ginkgo.FIt` ->
+  `github.com/onsi/ginkgo/v2.FIt`.
+* For a method call, the type is inserted. Pointers are treated like the type
+  they point to. When a type is an alias for a type in some other package, the
+  name of that other package will be used. Example:
+
+     var cf *spew.ConfigState = ...
+     cf.Dump() // -> github.com/davecgh/go-spew/spew.ConfigState.Dump
+
+To distinguish such patterns from traditional regular expression patterns, the
+encoding must start with a `{`. When using just JSON encoding, backslashes must
+get quoted inside strings. When using YAML, this isn't necessary. The following
+pattern strings are equivalent:
+
+    {Match: "type", Pattern: "^fmt\\.Println$"}
+
+    {Match: type,
+    Pattern: ^fmt\.Println$
+    }
+
+    {Match: type, Pattern: ^fmt\.Println$}
 
 A larger set of interesting patterns might include:
 
-* `^(?P<pkg>fmt)\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
-* `^(?P<pkg>fmt)\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
-* `^(?P<pkg>github.com/onsi/ginkgo(/v[[:digit:]]*)?)\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
-* `^(?P<pkg>github.com/davecgh/go-spew/spew)\.Dump$` -- forbid dumping detailed data to stdout
-* `^(?P<pkg>github.com/davecgh/go-spew/spew.ConfigState)\.Dump` -- also forbid it via a `ConfigState`
-* `^(?P<pkg>fmt)\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
+* `{Match: "type", Pattern: "^fmt\\.Print.*$"}` -- forbid use of Print statements because they are likely just for debugging
+* `{Match: "type", Pattern: "^fmt\\.Errorf$", Msg: "use github.com/pkg/errors"}` -- forbid Errorf in favor of using github.com/pkg/errors
+* `{Match: "type", Pattern: "^github.com/onsi/ginkgo(/v[[:digit:]]*)?)\\.F[A-Z].*$"}` -- forbid ginkgo focused commands (used for debug issues)
+* `{Match: "type", Pattern: "^github.com/davecgh/go-spew/spew\\.Dump$"}` -- forbid dumping detailed data to stdout
+* `{Match: "type", Pattern: "^github.com/davecgh/go-spew/spew.ConfigState\\.Dump"}` -- also forbid it via a `ConfigState`
 
+For backwards compatibility, the message may also get encoded inside the
+regular expression:
+
+* `{Match: "type", Pattern: "^fmt\\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.

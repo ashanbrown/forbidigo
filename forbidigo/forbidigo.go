@@ -54,7 +54,7 @@ func toString(i UsedIssue) string {
 
 type Linter struct {
 	cfg      config
-	patterns []*pattern
+	patterns []*Pattern
 }
 
 func DefaultPatterns() []string {
@@ -77,7 +77,7 @@ func NewLinter(patterns []string, options ...Option) (*Linter, error) {
 	if len(patterns) == 0 {
 		patterns = DefaultPatterns()
 	}
-	compiledPatterns := make([]*pattern, 0, len(patterns))
+	compiledPatterns := make([]*Pattern, 0, len(patterns))
 	for _, ptrn := range patterns {
 		p, err := parse(ptrn)
 		if err != nil {
@@ -198,14 +198,14 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	var pkgText *string
 	checkedPkgText := false
 	for _, p := range v.linter.patterns {
-		if p.matchWithPackage && !checkedPkgText {
+		if p.Match == MatchType && !checkedPkgText {
 			pkgText = v.pkgTextFor(node)
 			checkedPkgText = true
 		}
 
 		matchText := ""
 		switch {
-		case p.matchWithPackage:
+		case p.Match == MatchType:
 			if pkgText == nil {
 				continue
 			}
@@ -213,13 +213,13 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 		default:
 			matchText = srcText
 		}
-		if p.pattern.MatchString(matchText) && !v.permit(node) {
+		if p.re.MatchString(matchText) && !v.permit(node) {
 			v.issues = append(v.issues, UsedIssue{
 				identifier: srcText, // Always report the expression as it appears in the source code.
-				pattern:    p.pattern.String(),
+				pattern:    p.re.String(),
 				pos:        node.Pos(),
 				position:   v.runConfig.Fset.Position(node.Pos()),
-				customMsg:  p.msg,
+				customMsg:  p.Msg,
 			})
 		}
 	}

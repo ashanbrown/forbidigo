@@ -166,7 +166,8 @@ func ExampleFoo() {
 	})
 
 	t.Run("import renames detected by package pattern", func(t *testing.T) {
-		linter, _ := NewLinter([]string{`(?P<pkg>fmt)\.Printf`}, OptionExcludeGodocExamples(false))
+		linter, err := NewLinter([]string{`{Match: "type", Pattern: "^fmt\\.Printf"}`}, OptionExcludeGodocExamples(false))
+		require.NoError(t, err)
 		expectIssues(t, linter, `
 package bar
 
@@ -174,7 +175,7 @@ import fmt2 "fmt"
 
 func ExampleFoo() {
 	fmt2.Printf("here i am")
-}`, "use of `fmt2.Printf` forbidden by pattern `(?P<pkg>fmt)\\.Printf` at testing.go:7:2")
+}`, "use of `fmt2.Printf` forbidden by pattern `^fmt\\.Printf` at testing.go:7:2")
 	})
 
 }

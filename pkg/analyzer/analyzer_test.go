@@ -11,9 +11,9 @@ import (
 func TestAnalyzer(t *testing.T) {
 	testdata := analysistest.TestData()
 	patterns := append(forbidigo.DefaultPatterns(),
-		`^(?P<pkg>example.com/some/pkg)\.Forbidden$`,
-		`^(?P<pkg>example.com/some/pkg.CustomType)\.AlsoForbidden$`,
-		`^(?P<pkg>example.com/some/pkg.CustomInterface)\.StillForbidden$`,
+		`{Match: type, Pattern: ^example.com/some/pkg\.Forbidden$}`,
+		`{Match: type, Pattern: ^example.com/some/pkg.CustomType\.AlsoForbidden$}`,
+		`{Match: type, Pattern: ^example.com/some/pkg.CustomInterface\.StillForbidden$}`,
 	)
 	a := analyzer.NewAnalyzer()
 	for _, pattern := range patterns {
