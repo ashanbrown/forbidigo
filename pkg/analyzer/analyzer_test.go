@@ -14,6 +14,7 @@ func TestAnalyzer(t *testing.T) {
 		`{Match: type, Pattern: ^example.com/some/pkg\.Forbidden$}`,
 		`{Match: type, Pattern: ^example.com/some/pkg.CustomType\.AlsoForbidden$}`,
 		`{Match: type, Pattern: ^example.com/some/pkg.CustomInterface\.StillForbidden$}`,
+		`{Match: type, Pattern: example.com/some/thing\.Shiny}`,
 	)
 	a := analyzer.NewAnalyzer()
 	for _, pattern := range patterns {

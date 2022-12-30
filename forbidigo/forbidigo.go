@@ -253,8 +253,24 @@ func (v *visitor) pkgTextFor(node ast.Node) *string {
 	if v.runConfig.TypesInfo == nil {
 		return nil
 	}
+	// TODO: do type switch here instead of multiple if checks.
+	if ident, ok := node.(*ast.Ident); ok {
+		object, ok := v.runConfig.TypesInfo.Uses[ident]
+		if !ok {
+			// No information about the identifier. Should
+			// not happen, but perhaps there were compile
+			// errors?
+			return nil
+		}
+		str := object.Name()
+		if pkg := object.Pkg(); pkg != nil {
+			str = pkg.Path() + "." + str
+		}
+		return &str
+	}
 	selectorExpr, ok := node.(*ast.SelectorExpr)
 	if !ok {
+
 		return nil
 	}
 	selector := selectorExpr.X

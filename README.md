@@ -40,18 +40,25 @@ The full pattern struct has the following fields:
     method in a certain type) instead of how that thing is called in the source
     code.
 
-A pattern with `Match: type` only matches selector expressions
-(`<some>.<thing>`). Those expressions get expanded as follows:
+A pattern with `Match: type` expands selector expressions (`<some>.<thing>`)
+and identifiers. Those expressions get expanded as follows:
 
 * An imported package gets replaced with the full package path, including the
   version if there is one. Example: `ginkgo.FIt` ->
   `github.com/onsi/ginkgo/v2.FIt`.
+
 * For a method call, the type is inserted. Pointers are treated like the type
   they point to. When a type is an alias for a type in some other package, the
   name of that other package will be used. Example:
 
      var cf *spew.ConfigState = ...
      cf.Dump() // -> github.com/davecgh/go-spew/spew.ConfigState.Dump
+
+* A simple identifier gets replaced with full package path and name. Example:
+
+     . "github.com/onsi/ginkgo/v2"
+
+     FIt(...) // -> github.com/onsi/ginkgo/v2.FIt
 
 To distinguish such patterns from traditional regular expression patterns, the
 encoding must start with a `{` or contain line breaks. When using just JSON

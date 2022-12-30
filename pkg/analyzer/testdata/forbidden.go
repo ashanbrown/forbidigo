@@ -6,6 +6,7 @@ import (
 
 	anotherpkg "example.com/another/pkg"
 	somepkg "example.com/some/pkg"
+	. "example.com/some/thing"
 )
 
 func myCustom() somepkg.CustomType {
@@ -23,6 +24,8 @@ type myCustomInterface interface {
 }
 
 var forbiddenFunctionRef = somepkg.Forbidden // want "somepkg.Forbidden.*forbidden by pattern .*example.com/some/pkg.*Forbidden"
+
+var forbiddenVariableRef = Shiny // want "Shiny.*forbidden by pattern.*example.com/some/thing.*Shiny"
 
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"
