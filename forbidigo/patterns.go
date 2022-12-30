@@ -31,6 +31,31 @@ type Pattern struct {
 	Msg string `yaml:"Msg"`
 }
 
+// A YAMLPattern pattern in a YAML string may be represented either by a string
+// (the traditional regular expression syntax) or a struct (for more complex
+// patterns).
+type YAMLPattern Pattern
+
+func (p *YAMLPattern) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try struct first. It's unlikely that a regular expression string
+	// is valid YAML for a struct.
+	var pattern Pattern
+	if err := unmarshal(&pattern); err != nil {
+		errStr := err.Error()
+		// Didn't work, try plain string.
+		var ptrn string
+		if err := unmarshal(&ptrn); err != nil {
+			return fmt.Errorf("pattern is neither a regular expression string (%s) nor a Pattern struct (%s)", err.Error(), errStr)
+		}
+		p.Pattern = ptrn
+	} else {
+		*p = YAMLPattern(pattern)
+	}
+	return ((*Pattern)(p)).validate(p.Pattern)
+}
+
+var _ yaml.Unmarshaler = &YAMLPattern{}
+
 // parse accepts a regular expression or, if the string starts with {, a
 // JSON or YAML representation of a Pattern.
 func parse(ptrn string) (*Pattern, error) {
@@ -44,31 +69,38 @@ func parse(ptrn string) (*Pattern, error) {
 		ptrn = pattern.Pattern
 	}
 
+	if err := pattern.validate(ptrn); err != nil {
+		return nil, err
+	}
+	return pattern, nil
+}
+
+func (p *Pattern) validate(ptrn string) error {
 	ptrnRe, err := regexp.Compile(ptrn)
 	if err != nil {
-		return nil, fmt.Errorf("unable to compile pattern `%s`: %s", ptrn, err)
+		return fmt.Errorf("unable to compile pattern `%s`: %s", ptrn, err)
 	}
 	re, err := syntax.Parse(ptrn, syntax.Perl)
 	if err != nil {
-		return nil, fmt.Errorf("unable to parse pattern `%s`: %s", ptrn, err)
+		return fmt.Errorf("unable to parse pattern `%s`: %s", ptrn, err)
 	}
 	msg := extractComment(re)
 	if msg != "" {
-		pattern.Msg = msg
+		p.Msg = msg
 	}
-	pattern.re = ptrnRe
-	if pattern.Match == "" {
-		pattern.Match = MatchText
-	}
+	p.re = ptrnRe
 
-	switch pattern.Match {
+	if p.Match == "" {
+		p.Match = MatchText
+	}
+	switch p.Match {
 	case MatchText, MatchType:
 		// okay
 	default:
-		return nil, fmt.Errorf("unsupported match string: %q", pattern.Match)
+		return fmt.Errorf("unsupported match string: %q", p.Match)
 	}
 
-	return pattern, nil
+	return nil
 }
 
 // Traverse the leaf submatches in the regex tree and extract a comment, if any
