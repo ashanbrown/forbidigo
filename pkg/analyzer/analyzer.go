@@ -29,6 +29,7 @@ type analyzer struct {
 	patterns           []string
 	usePermitDirective bool
 	includeExamples    bool
+	debugLog           func(format string, args ...interface{})
 }
 
 // NewAnalyzer returns a go/analysis-compatible analyzer
@@ -36,10 +37,15 @@ type analyzer struct {
 // Set "-examples" to analyze godoc examples
 // Set "-permit=false" to ignore "//permit:<identifier>" directives.
 func NewAnalyzer() *analysis.Analyzer {
+	return newAnalyzer(nil /* no debug output */)
+}
+
+func newAnalyzer(debugLog func(format string, args ...interface{})) *analysis.Analyzer {
 	var flags flag.FlagSet
 	a := analyzer{
 		usePermitDirective: true,
 		includeExamples:    true,
+		debugLog:           debugLog,
 	}
 
 	flags.Var(&listVar{values: &a.patterns}, "p", "pattern")
@@ -68,7 +74,7 @@ func (a *analyzer) runAnalysis(pass *analysis.Pass) (interface{}, error) {
 	for _, f := range pass.Files {
 		nodes = append(nodes, f)
 	}
-	issues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: pass.Fset, TypesInfo: pass.TypesInfo}, nodes...)
+	issues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: pass.Fset, TypesInfo: pass.TypesInfo, DebugLog: a.debugLog}, nodes...)
 	if err != nil {
 		return nil, err
 	}

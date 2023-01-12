@@ -226,7 +226,7 @@ func parseFile(t *testing.T, linter *Linter, fileName, contents string) []Issue 
 		for _, n := range p.Syntax {
 			nodes = append(nodes, n)
 		}
-		newIssues, err := linter.RunWithConfig(RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo}, nodes...)
+		newIssues, err := linter.RunWithConfig(RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo, DebugLog: t.Logf}, nodes...)
 		if err != nil {
 			log.Fatalf("failed: %s", err)
 		}

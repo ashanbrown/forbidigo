@@ -1,10 +1,9 @@
-package analyzer_test
+package analyzer
 
 import (
 	"testing"
 
 	"github.com/ashanbrown/forbidigo/forbidigo"
-	"github.com/ashanbrown/forbidigo/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
@@ -18,7 +17,7 @@ func TestAnalyzer(t *testing.T) {
 		`{Match: type, Pattern: myCustomStruct\..*Forbidden}`,
 		`{Match: type, Pattern: myCustomInterface\..*Forbidden}`,
 	)
-	a := analyzer.NewAnalyzer()
+	a := newAnalyzer(t.Logf)
 	for _, pattern := range patterns {
 		if err := a.Flags.Set("p", pattern); err != nil {
 			t.Fatalf("unexpected error when setting pattern: %v", err)

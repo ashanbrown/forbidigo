@@ -118,6 +118,9 @@ type RunConfig struct {
 	// TypesInfo is needed for "pkg" match patterns. Not providing it
 	// disables those patterns.
 	TypesInfo *types.Info
+
+	// DebugLog is used to print debug messages. May be nil.
+	DebugLog func(format string, args ...interface{})
 }
 
 // Patterns returns the parsed patterns.
@@ -126,6 +129,9 @@ func (l *Linter) Patterns() []*Pattern {
 }
 
 func (l *Linter) RunWithConfig(config RunConfig, nodes ...ast.Node) ([]Issue, error) {
+	if config.DebugLog == nil {
+		config.DebugLog = func(format string, args ...interface{}) {}
+	}
 	var issues []Issue
 	for _, node := range nodes {
 		var comments []*ast.CommentGroup
@@ -205,6 +211,11 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	for _, p := range v.linter.patterns {
 		if p.Match == MatchType && !checkedPkgText {
 			pkgText = v.pkgTextFor(node)
+			if pkgText != nil {
+				v.runConfig.DebugLog("%s: %q -> %q", v.runConfig.Fset.Position(node.Pos()), srcText, *pkgText)
+			} else {
+				v.runConfig.DebugLog("%s: %q -> not expanded", v.runConfig.Fset.Position(node.Pos()), srcText)
+			}
 			checkedPkgText = true
 		}
 
