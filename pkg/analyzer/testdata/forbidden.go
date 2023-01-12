@@ -6,6 +6,7 @@ import (
 
 	anotherpkg "example.com/another/pkg"
 	somepkg "example.com/some/pkg"
+	renamed "example.com/some/renamedpkg" // Package name is "renamed".
 	. "example.com/some/thing"
 )
 
@@ -62,6 +63,10 @@ func Foo() {
 	// Forbidden method called via interface: must be forbidden separately!
 	var ci2 myCustomInterface = somepkg.CustomType{}
 	ci2.AlsoForbidden() // want "ci2.AlsoForbidden.*forbidden by pattern.*myCustomInterface"
+
+	// Package name != import path.
+	renamed.ForbiddenFunc()            // want "renamed.Forbidden.* by pattern .*renamedpkg..Forbidden"
+	renamed.Struct{}.ForbiddenMethod() // want "renamed.Struct...ForbiddenMethod.* by pattern .*renamedpkg.*Struct.*Forbidden"
 }
 
 func Bar() string {
