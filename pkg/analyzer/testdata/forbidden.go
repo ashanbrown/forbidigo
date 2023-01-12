@@ -36,31 +36,32 @@ func Foo() {
 	somepkg.Forbidden()      // want "somepkg.Forbidden.*forbidden by pattern .*example.com/some/pkg.*Forbidden"
 
 	c := somepkg.CustomType{}
-	c.AlsoForbidden() // want "c.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+	c.AlsoForbidden() // want "c.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
 
 	// Selector expression with result of function call in package.
-	somepkg.NewCustom().AlsoForbidden() // want "somepkg.NewCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+	somepkg.NewCustom().AlsoForbidden() // want "somepkg.NewCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
 
 	// Selector expression with result of normal function call.
-	myCustom().AlsoForbidden() // want "myCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+	myCustom().AlsoForbidden() // want "myCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
 
 	// Selector expression with result of normal function call.
-	myCustomFunc().AlsoForbidden() // want "myCustomFunc...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+	myCustomFunc().AlsoForbidden() // want "myCustomFunc...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
 
 	// Type alias and pointer.
 	c2 := &anotherpkg.CustomType{}
-	c2.AlsoForbidden() // want "c2.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*AlsoForbidden"
+	c2.AlsoForbidden() // want "c2.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
 
 	// Interface.
 	var ci somepkg.CustomInterface
-	ci.StillForbidden() // want "ci.StillForbidden.*forbidden by pattern.*example.com/some/pkg.CustomInterface.*StillForbidden"
+	ci.StillForbidden() // want "ci.StillForbidden.*forbidden by pattern.*example.com/some/pkg.CustomInterface.*Forbidden"
 
-	// Struct embedded inside another - not handled!
-	myCustomStruct{}.AlsoForbidden()
+	// Struct embedded inside another: must be forbidden separately!
+	myCustomStruct{}.AlsoForbidden()    // want "myCustomStruct...AlsoForbidden.*forbidden by pattern.*myCustomStruct"
+	_ = myCustomStruct{}.ForbiddenField // want "myCustomStruct...ForbiddenField.*forbidden by pattern.*myCustomStruct"
 
-	// Forbidden method called via interface - not handled!
+	// Forbidden method called via interface: must be forbidden separately!
 	var ci2 myCustomInterface = somepkg.CustomType{}
-	ci2.AlsoForbidden()
+	ci2.AlsoForbidden() // want "ci2.AlsoForbidden.*forbidden by pattern.*myCustomInterface"
 }
 
 func Bar() string {
