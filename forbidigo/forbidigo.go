@@ -253,6 +253,7 @@ func (v *visitor) pkgTextFor(node ast.Node) *string {
 	if v.runConfig.TypesInfo == nil {
 		return nil
 	}
+
 	// TODO: do type switch here instead of multiple if checks.
 	if ident, ok := node.(*ast.Ident); ok {
 		object, ok := v.runConfig.TypesInfo.Uses[ident]
@@ -275,69 +276,38 @@ func (v *visitor) pkgTextFor(node ast.Node) *string {
 	}
 	selector := selectorExpr.X
 	var pkgText string
-	switch selector := selector.(type) {
-	case *ast.Ident:
-		object, ok := v.runConfig.TypesInfo.Uses[selector]
-		if !ok {
-			// No information about the identifier. Should
-			// not happen, but perhaps there were compile
-			// errors?
-			return nil
-		}
-		switch object := object.(type) {
-		case *types.PkgName:
-			pkgText = object.Imported().Path()
-		case *types.Var:
-			pkgText = object.Type().String()
-			// Ignore whether it is a pointer.
-			pkgText = strings.TrimLeft(pkgText, "*")
-		default:
-			// Something else?
-			return nil
-		}
-	case *ast.CallExpr:
-		var object types.Object
-		switch fun := selector.Fun.(type) {
-		case *ast.SelectorExpr:
-			o, ok := v.runConfig.TypesInfo.Uses[fun.Sel]
-			if !ok {
-				// No information about the identifier. Should
-				// not happen, but perhaps there were compile
-				// errors?
-				return nil
-			}
-			object = o
+
+	// If we are lucky, the entire selector expression has a known
+	// type. We don't care about the value.
+	if typeAndValue, ok := v.runConfig.TypesInfo.Types[selector]; ok {
+		pkgText = typeAndValue.Type.String()
+	} else {
+		// Some expressions need special treatment.
+		switch selector := selector.(type) {
 		case *ast.Ident:
-			o, ok := v.runConfig.TypesInfo.Uses[fun]
+			object, ok := v.runConfig.TypesInfo.Uses[selector]
 			if !ok {
 				// No information about the identifier. Should
 				// not happen, but perhaps there were compile
 				// errors?
 				return nil
 			}
-			object = o
+			switch object := object.(type) {
+			case *types.PkgName:
+				pkgText = object.Imported().Path()
+			case *types.Var:
+				pkgText = object.Type().String()
+			default:
+				// Something else?
+				return nil
+			}
 		default:
 			return nil
 		}
-		typ := object.Type()
-		signature, ok := typ.(*types.Signature)
-		if !ok {
-			// Shouldn't happen. We are looking at the type
-			// of a function call.
-			return nil
-		}
-		results := signature.Results()
-		if results.Len() != 1 {
-			// Shouldn't happen because the result is used
-			// as selector.
-			return nil
-		}
-		result := results.At(0)
-		pkgText = result.Type().String()
-	default:
-		return nil
 	}
 
+	// Ignore whether it is a pointer.
+	pkgText = strings.TrimLeft(pkgText, "*")
 	pkgText += "." + selectorExpr.Sel.Name
 	return &pkgText
 }
