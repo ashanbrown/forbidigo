@@ -31,13 +31,13 @@ impact because additional information is required for the analysis.
 
 Replacing the literal source code works for items in a package as in the
 `fmt2.Print` example above and also for struct fields and methods. For those,
-`<package>.<type name>.<field or method name>` replaces the source code
-text. For the sake of simplicity, `<package>` is the last non-version component
-of the import path, not the full path. Beware that this may be different from
-the package name:
+`<package name>.<type name>.<field or method name>` replaces the source code
+text. `<package name>` is what the package declares in its `package` statement,
+which may be different from last part of the import path:
 
       import "example.com/some/pkg" // pkg uses `package somepkg`
-      somepkg.SomeFunction() // -> pkg.SomeFunction
+      s := somepkg.SomeStruct{}
+      s.SomeMethod() // -> somepkg.SomeStruct.SomeMethod
 
 Pointers are treated like the type they point to:
 
@@ -94,11 +94,9 @@ The full pattern struct has the following fields:
   pattern matches.
 * `pattern`: the regular expression that matches the source code or expanded
   expression, depending on the global flag.
-* `package`: a regular expression for the full package path. The package path
-  includes the package version if the package has a version >= 2 and ends with
-  the package name, i.e. it will differ from how the package was imported when
-  the package doesn't follow the usual Go convention for its package name.
-  This is only supported when `expand_expression` is enabled.
+* `package`: a regular expression for the full package import path. The package
+  path includes the package version if the package has a version >= 2. This is
+  only supported when `expand_expression` is enabled.
 
 To distinguish such patterns from traditional regular expression patterns, the
 encoding must start with a `{` or contain line breaks. When using just JSON

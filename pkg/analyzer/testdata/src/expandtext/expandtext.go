@@ -65,8 +65,8 @@ func Foo() {
 	ci2.AlsoForbidden() // want "ci2.AlsoForbidden.*forbidden by pattern.*myCustomInterface"
 
 	// Package name != import path.
-	renamed.ForbiddenFunc()            // want "renamed.Forbidden.* by pattern .*renamedpkg..Forbidden"
-	renamed.Struct{}.ForbiddenMethod() // want "renamed.Struct...ForbiddenMethod.* by pattern .*renamedpkg.*Struct.*Forbidden"
+	renamed.ForbiddenFunc()            // want "renamed.Forbidden.* by pattern .*renamed..Forbidden"
+	renamed.Struct{}.ForbiddenMethod() // want "renamed.Struct...ForbiddenMethod.* by pattern .*renamed.*Struct.*Forbidden"
 }
 
 func Bar() string {

@@ -32,8 +32,8 @@ func TestExpandAnalyzer(t *testing.T) {
 		`{pattern: ^thing\.Shiny, package: ^example.com/some/thing$}`,
 		`{pattern: myCustomStruct\..*Forbidden, package: ^expandtext$}`,
 		`{pattern: myCustomInterface\.AlsoForbidden, package: ^expandtext$}`,
-		`{pattern: renamedpkg\.Forbidden, package: ^example.com/some/renamedpkg$}`,
-		`{pattern: renamedpkg\.Struct.Forbidden, package: ^example.com/some/renamedpkg$}`,
+		`{pattern: renamed\.Forbidden, package: ^example.com/some/renamedpkg$}`,
+		`{pattern: renamed\.Struct.Forbidden, package: ^example.com/some/renamedpkg$}`,
 	)
 	a := newAnalyzer(t.Logf)
 	for _, pattern := range patterns {
