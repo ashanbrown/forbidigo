@@ -26,20 +26,23 @@ func TestLiteralAnalyzer(t *testing.T) {
 func TestExpandAnalyzer(t *testing.T) {
 	testdata := analysistest.TestData()
 	patterns := append(forbidigo.DefaultPatterns(),
-		`{Match: type, Pattern: ^example.com/some/pkg\.Forbidden$}`,
-		`{Match: type, Pattern: ^example.com/some/pkg.CustomType\..*Forbidden.*$}`,
-		`{Match: type, Pattern: ^example.com/some/pkg.CustomInterface\.StillForbidden$}`,
-		`{Match: type, Pattern: example.com/some/thing\.Shiny}`,
-		`{Match: type, Pattern: myCustomStruct\..*Forbidden}`,
-		`{Match: type, Pattern: myCustomInterface\..*Forbidden}`,
-		`{Match: type, Pattern: renamedpkg\.Forbidden}`,
-		`{Match: type, Pattern: renamedpkg\.Struct.Forbidden}`,
+		`{pattern: ^pkg\.Forbidden$, package: ^example.com/some/pkg$}`,
+		`{pattern: ^pkg\.CustomType.*Forbidden.*$, package: ^example.com/some/pkg$}`,
+		`{pattern: ^pkg\.CustomInterface.*Forbidden$, package: ^example.com/some/pkg$}`,
+		`{pattern: ^thing\.Shiny, package: ^example.com/some/thing$}`,
+		`{pattern: myCustomStruct\..*Forbidden, package: ^expandtext$}`,
+		`{pattern: myCustomInterface\.AlsoForbidden, package: ^expandtext$}`,
+		`{pattern: renamedpkg\.Forbidden, package: ^example.com/some/renamedpkg$}`,
+		`{pattern: renamedpkg\.Struct.Forbidden, package: ^example.com/some/renamedpkg$}`,
 	)
 	a := newAnalyzer(t.Logf)
 	for _, pattern := range patterns {
 		if err := a.Flags.Set("p", pattern); err != nil {
 			t.Fatalf("unexpected error when setting pattern: %v", err)
 		}
+	}
+	if err := a.Flags.Set("expand_expressions", "true"); err != nil {
+		t.Fatalf("unexpected error when enabling expression expansion: %v", err)
 	}
 	analysistest.Run(t, testdata, a, "expandtext")
 }

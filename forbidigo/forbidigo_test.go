@@ -16,7 +16,7 @@ import (
 func TestForbiddenIdentifiers(t *testing.T) {
 	t.Run("it finds forbidden identifiers", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		expectIssues(t, linter, `
+		expectIssues(t, linter, false, `
 package bar
 
 func foo() {
@@ -26,19 +26,19 @@ func foo() {
 
 	t.Run("it finds forbidden, renamed identifiers", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		expectIssues(t, linter, `
+		expectIssues(t, linter, true, `
 package bar
 
 import renamed "fmt"
 
 func foo() {
 	renamed.Printf("here i am")
-}` /* only detected inside golanci-lint */)
+}`, "use of `renamed.Printf` forbidden by pattern `fmt\\.Printf` at testing.go:7:2")
 	})
 
 	t.Run("displays custom messages", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`^fmt\.Printf(# a custom message)?$`})
-		expectIssues(t, linter, `
+		expectIssues(t, linter, false, `
 package bar
 
 func foo() {
@@ -48,7 +48,7 @@ func foo() {
 
 	t.Run("it doesn't require a package on the identifier", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`Printf`})
-		expectIssues(t, linter, `
+		expectIssues(t, linter, false, `
 package bar
 
 func foo() {
@@ -58,7 +58,7 @@ func foo() {
 
 	t.Run("allows explicitly permitting otherwise forbidden identifiers", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		expectIssues(t, linter, `
+		expectIssues(t, linter, false, `
 package bar
 
 func foo() {
@@ -68,7 +68,7 @@ func foo() {
 
 	t.Run("allows old notation for explicitly permitting otherwise forbidden identifiers", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		expectIssues(t, linter, `
+		expectIssues(t, linter, false, `
 package bar
 
 func foo() {
@@ -78,7 +78,7 @@ func foo() {
 
 	t.Run("has option to ignore permit directives", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionIgnorePermitDirectives(true))
-		issues := parseFile(t, linter, "file.go", `
+		issues := parseFile(t, linter, false, "file.go", `
 package bar
 
 func foo() {
@@ -89,7 +89,7 @@ func foo() {
 
 	t.Run("examples are excluded by default in test files", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		issues := parseFile(t, linter, "file_test.go", `
+		issues := parseFile(t, linter, false, "file_test.go", `
 package bar
 
 func ExampleFoo() {
@@ -100,7 +100,7 @@ func ExampleFoo() {
 
 	t.Run("whole file examples are excluded by default", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		issues := parseFile(t, linter, "file_test.go", `
+		issues := parseFile(t, linter, false, "file_test.go", `
 package bar
 
 func Foo() {
@@ -115,7 +115,7 @@ func Example() {
 
 	t.Run("Test functions prevent a file from being considered a whole file example", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		issues := parseFile(t, linter, "file_test.go", `
+		issues := parseFile(t, linter, false, "file_test.go", `
 package bar
 
 func TestFoo() {
@@ -129,7 +129,7 @@ func Example() {
 
 	t.Run("Benchmark functions prevent a file from being considered a whole file example", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
-		issues := parseFile(t, linter, "file_test.go", `
+		issues := parseFile(t, linter, false, "file_test.go", `
 package bar
 
 func BenchmarkFoo() {
@@ -143,7 +143,7 @@ func Example() {
 
 	t.Run("examples can be included", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionExcludeGodocExamples(false))
-		issues := parseFile(t, linter, "file.go", `
+		issues := parseFile(t, linter, false, "file.go", `
 package bar
 
 func ExampleFoo() {
@@ -152,9 +152,9 @@ func ExampleFoo() {
 		assert.NotEmpty(t, issues)
 	})
 
-	t.Run("import renames not detected by simple pattern", func(t *testing.T) {
+	t.Run("import renames not detected without type information", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionExcludeGodocExamples(false))
-		issues := parseFile(t, linter, "file.go", `
+		issues := parseFile(t, linter, false, "file.go", `
 package bar
 
 import fmt2 "fmt"
@@ -165,10 +165,10 @@ func ExampleFoo() {
 		assert.Empty(t, issues)
 	})
 
-	t.Run("import renames detected by package pattern", func(t *testing.T) {
-		linter, err := NewLinter([]string{`{Match: "type", Pattern: "^fmt\\.Printf"}`}, OptionExcludeGodocExamples(false))
+	t.Run("import renames detected with type information", func(t *testing.T) {
+		linter, err := NewLinter([]string{`^fmt\.Printf`}, OptionExcludeGodocExamples(false))
 		require.NoError(t, err)
-		expectIssues(t, linter, `
+		expectIssues(t, linter, true, `
 package bar
 
 import fmt2 "fmt"
@@ -183,8 +183,8 @@ func ExampleFoo() {
 // sourcePath matches "at /tmp/TestForbiddenIdentifiersdisplays_custom_messages4260088387/001/testing.go".
 var sourcePath = regexp.MustCompile(`at .*/([[:alnum:]]+.go)`)
 
-func expectIssues(t *testing.T, linter *Linter, contents string, issues ...string) {
-	actualIssues := parseFile(t, linter, "testing.go", contents)
+func expectIssues(t *testing.T, linter *Linter, expand bool, contents string, issues ...string) {
+	actualIssues := parseFile(t, linter, expand, "testing.go", contents)
 	actualIssueStrs := make([]string, 0, len(actualIssues))
 	for _, i := range actualIssues {
 		str := i.String()
@@ -194,7 +194,7 @@ func expectIssues(t *testing.T, linter *Linter, contents string, issues ...strin
 	assert.ElementsMatch(t, issues, actualIssueStrs)
 }
 
-func parseFile(t *testing.T, linter *Linter, fileName, contents string) []Issue {
+func parseFile(t *testing.T, linter *Linter, expand bool, fileName, contents string) []Issue {
 	// We can use packages.Load if we put a single file into a separate
 	// directory and parse it with Go modules of. We have to be in that
 	// directory to use "." as pattern, parsing it via the absolute path
@@ -207,9 +207,12 @@ func parseFile(t *testing.T, linter *Linter, fileName, contents string) []Issue 
 	env := os.Environ()
 	env = append(env, "GO111MODULE=off")
 	cfg := packages.Config{
-		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedDeps,
+		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
 		Env:   env,
 		Tests: true,
+	}
+	if expand {
+		cfg.Mode |= packages.NeedTypesInfo | packages.NeedDeps
 	}
 	pwd, err := os.Getwd()
 	require.NoError(t, err)

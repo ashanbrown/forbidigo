@@ -9,26 +9,23 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	MatchText = "text"
-	MatchType = "type"
-)
-
 // Pattern matches code that is not supposed to be used.
 type Pattern struct {
-	re *regexp.Regexp
+	re, pkgRe *regexp.Regexp
 
 	// Pattern is the regular expression string that is used for matching.
-	Pattern string `yaml:"Pattern"`
+	// It gets matched against the literal source code text or the expanded
+	// text, depending on the mode in which the analyzer runs.
+	Pattern string `yaml:"pattern"`
 
-	// Match defines whether the regular expression is matched against the
-	// source code literally ("text", the default) or whether type
-	// information is used to determine what is being referenced ("type").
-	Match string `yaml:"Match"`
+	// Package is a regular expression for the full package path of
+	// an imported item. Ignored unless the analyzer is configured to
+	// determine that information.
+	Package string `yaml:"package"`
 
 	// Msg gets printed in addition to the normal message if a match is
 	// found.
-	Msg string `yaml:"Msg"`
+	Msg string `yaml:"msg"`
 }
 
 // A YAMLPattern pattern in a YAML string may be represented either by a string
@@ -51,7 +48,7 @@ func (p *YAMLPattern) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	} else {
 		*p = YAMLPattern(pattern)
 	}
-	return ((*Pattern)(p)).validate(p.Pattern)
+	return ((*Pattern)(p)).validate()
 }
 
 var _ yaml.Unmarshaler = &YAMLPattern{}
@@ -67,23 +64,24 @@ func parse(ptrn string) (*Pattern, error) {
 		if err := yaml.UnmarshalStrict([]byte(ptrn), pattern); err != nil {
 			return nil, fmt.Errorf("parsing as JSON or YAML failed: %v", err)
 		}
-		ptrn = pattern.Pattern
+	} else {
+		pattern.Pattern = ptrn
 	}
 
-	if err := pattern.validate(ptrn); err != nil {
+	if err := pattern.validate(); err != nil {
 		return nil, err
 	}
 	return pattern, nil
 }
 
-func (p *Pattern) validate(ptrn string) error {
-	ptrnRe, err := regexp.Compile(ptrn)
+func (p *Pattern) validate() error {
+	ptrnRe, err := regexp.Compile(p.Pattern)
 	if err != nil {
-		return fmt.Errorf("unable to compile pattern `%s`: %s", ptrn, err)
+		return fmt.Errorf("unable to compile source code pattern `%s`: %s", p.Pattern, err)
 	}
-	re, err := syntax.Parse(ptrn, syntax.Perl)
+	re, err := syntax.Parse(p.Pattern, syntax.Perl)
 	if err != nil {
-		return fmt.Errorf("unable to parse pattern `%s`: %s", ptrn, err)
+		return fmt.Errorf("unable to parse source code pattern `%s`: %s", p.Pattern, err)
 	}
 	msg := extractComment(re)
 	if msg != "" {
@@ -91,14 +89,12 @@ func (p *Pattern) validate(ptrn string) error {
 	}
 	p.re = ptrnRe
 
-	if p.Match == "" {
-		p.Match = MatchText
-	}
-	switch p.Match {
-	case MatchText, MatchType:
-		// okay
-	default:
-		return fmt.Errorf("unsupported match string: %q", p.Match)
+	if p.Package != "" {
+		pkgRe, err := regexp.Compile(p.Package)
+		if err != nil {
+			return fmt.Errorf("unable to compile package pattern `%s`: %s", p.Package, err)
+		}
+		p.pkgRe = pkgRe
 	}
 
 	return nil

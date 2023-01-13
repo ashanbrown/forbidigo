@@ -24,39 +24,39 @@ type myCustomInterface interface {
 	AlsoForbidden()
 }
 
-var forbiddenFunctionRef = somepkg.Forbidden // want "somepkg.Forbidden.*forbidden by pattern .*example.com/some/pkg.*Forbidden"
+var forbiddenFunctionRef = somepkg.Forbidden // want "somepkg.Forbidden.*forbidden by pattern .*\\^pkg.*Forbidden"
 
-var forbiddenVariableRef = Shiny // want "Shiny.*forbidden by pattern.*example.com/some/thing.*Shiny"
+var forbiddenVariableRef = Shiny // want "Shiny.*forbidden by pattern.*\\^thing.*Shiny"
 
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"
 	fmt.Printf("this is ok") //permit:fmt.Printf // this is ok
 	print("not ok")          // want "forbidden by pattern"
 	println("also not ok")   // want "forbidden by pattern"
-	alias.Println("hello")   // not matched by default pattern fmt.Println
-	somepkg.Forbidden()      // want "somepkg.Forbidden.*forbidden by pattern .*example.com/some/pkg.*Forbidden"
+	alias.Println("hello")   // want "forbidden by pattern"
+	somepkg.Forbidden()      // want "somepkg.Forbidden.*forbidden by pattern .*\\^pkg.*Forbidden"
 
 	c := somepkg.CustomType{}
-	c.AlsoForbidden() // want "c.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
+	c.AlsoForbidden() // want "c.AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Selector expression with result of function call in package.
-	somepkg.NewCustom().AlsoForbidden() // want "somepkg.NewCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
+	somepkg.NewCustom().AlsoForbidden() // want "somepkg.NewCustom...AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Selector expression with result of normal function call.
-	myCustom().AlsoForbidden() // want "myCustom...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
+	myCustom().AlsoForbidden() // want "myCustom...AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Selector expression with result of normal function call.
-	myCustomFunc().AlsoForbidden() // want "myCustomFunc...AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
+	myCustomFunc().AlsoForbidden() // want "myCustomFunc...AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Type alias and pointer.
 	c2 := &anotherpkg.CustomType{}
-	c2.AlsoForbidden() // want "c2.AlsoForbidden.*forbidden by pattern.*example.com/some/pkg.CustomType.*Forbidden"
+	c2.AlsoForbidden() // want "c2.AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Interface.
 	var ci somepkg.CustomInterface
-	ci.StillForbidden() // want "ci.StillForbidden.*forbidden by pattern.*example.com/some/pkg.CustomInterface.*Forbidden"
+	ci.StillForbidden() // want "ci.StillForbidden.*forbidden by pattern.*\\^pkg..CustomInterface..Forbidden"
 
-	// Struct embedded inside another: must be forbidden separately!
+	// Forbidden embedded inside another: must be forbidden separately!
 	myCustomStruct{}.AlsoForbidden()    // want "myCustomStruct...AlsoForbidden.*forbidden by pattern.*myCustomStruct"
 	_ = myCustomStruct{}.ForbiddenField // want "myCustomStruct...ForbiddenField.*forbidden by pattern.*myCustomStruct"
 
@@ -73,5 +73,5 @@ func Bar() string {
 	fmt := struct {
 		Println string
 	}{}
-	return fmt.Println // want "forbidden by pattern"
+	return fmt.Println // not matched because it expands to `struct{Println string}.Println`
 }

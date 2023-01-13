@@ -24,75 +24,113 @@ called with `fmt2.Print`.
 This makes it hard to match packages that may get imported under a variety of
 different names, for example because there is no established convention or the
 name is so generic that import aliases have to be used. To solve this,
-forbidigo also supports more complex patterns. Such patterns are strings that
-contain JSON or YAML for a struct.
+forbidigo also supports a more advanced mode where it uses type information to
+identify what an expression references. This needs to be enabled through the
+`expand_expression` command line parameter. Beware this may have a performance
+impact because additional information is required for the analysis.
+
+Replacing the literal source code works for items in a package as in the
+`fmt2.Print` example above and also for struct fields and methods. For those,
+`<package>.<type name>.<field or method name>` replaces the source code
+text. For the sake of simplicity, `<package>` is the last non-version component
+of the import path, not the full path. Beware that this may be different from
+the package name:
+
+      import "example.com/some/pkg" // pkg uses `package somepkg`
+      somepkg.SomeFunction() // -> pkg.SomeFunction
+
+Pointers are treated like the type they point to:
+
+      var cf *spew.ConfigState = ...
+      cf.Dump() // -> spew.ConfigState.Dump
+
+When a type is an alias for a type in some other package, the name of that
+other package will be used.
+
+An imported identifier gets replaced as if it had been imported without `import .`:
+
+     import . "github.com/onsi/ginkgo/v2"
+     FIt(...) // -> ginkgo.FIt
+
+Beware that looking up the package name has limitations. When a struct embeds
+some other type, references to the inherited fields or methods get resolved
+with the outer struct as type:
+
+     package foo
+
+     type InnerStruct {
+         SomeField int
+     }
+
+     func (i innerStruct) SomeMethod() {}
+
+     type OuterStruct {
+         InnerStruct
+     }
+
+     s := OuterStruct{}
+     s.SomeMethod() // -> foo.OuterStruct.SomeMethod
+     i := s.SomeField // -> foo.OuterStruct.SomeField
+
+When a method gets called via some interface, that invocation also only
+gets resolved to the interface, not the underlying implementation:
+
+    // innerStruct as above
+
+    type myInterface interface {
+        SomeMethod()
+    }
+
+    var i myInterface = InnerStruct{}
+    i.SomeMethod() // -> foo.myInterface.SomeMethod
+
+Using the package name is simple, but the name is not necessarily unique. For
+more advanced cases, it is possible to specify more complex patterns. Such
+patterns are strings that contain JSON or YAML for a struct.
 
 The full pattern struct has the following fields:
 
-* `Msg`: an additional comment that gets added to the error message when a
+* `msg`: an additional comment that gets added to the error message when a
   pattern matches.
-* `Pattern`: the regular expression itself.
-* `Match`: a string which defines what the regular expression is matched
-  against. Valid values are:
-  * `text`: the traditional, literal source code match.
-  * `type`: a semantic match that uses type information to enable precise
-    matches against what is being used (a function in a certain package, or a
-    method in a certain type) instead of how that thing is called in the source
-    code.
-
-A pattern with `Match: type` expands selector expressions (`<some>.<thing>`)
-and identifiers. Those expressions get expanded as follows:
-
-* An imported package gets replaced with the full package path, including the
-  version if there is one. Example: `ginkgo.FIt` ->
-  `github.com/onsi/ginkgo/v2.FIt`.
-
-* For a method call, the type is inserted. Pointers are treated like the type
-  they point to. When a type is an alias for a type in some other package, the
-  name of that other package will be used. Example:
-
-     var cf *spew.ConfigState = ...
-     cf.Dump() // -> github.com/davecgh/go-spew/spew.ConfigState.Dump
-
-* A simple identifier gets replaced with full package path and name. Example:
-
-     . "github.com/onsi/ginkgo/v2"
-
-     FIt(...) // -> github.com/onsi/ginkgo/v2.FIt
+* `pattern`: the regular expression that matches the source code or expanded
+  expression, depending on the global flag.
+* `package`: a regular expression for the full package path. The package path
+  includes the package version if the package has a version >= 2 and ends with
+  the package name, i.e. it will differ from how the package was imported when
+  the package doesn't follow the usual Go convention for its package name.
+  This is only supported when `expand_expression` is enabled.
 
 To distinguish such patterns from traditional regular expression patterns, the
 encoding must start with a `{` or contain line breaks. When using just JSON
 encoding, backslashes must get quoted inside strings. When using YAML, this
 isn't necessary. The following pattern strings are equivalent:
 
-    {Match: "type", Pattern: "^fmt\\.Println$"}
+    {msg: "do not write to stdout", Pattern: "^fmt\\.Println$"}
 
-    {Match: type,
+    {msg: do not write to stdout,
     Pattern: ^fmt\.Println$
     }
 
-    {Match: type, Pattern: ^fmt\.Println$}
+    {msg: do not write to stdout, pattern: ^fmt\.Println$}
 
-    Match: type
-    Pattern: ^fmt\.Println$
+    msg: do not write to stdout
+    pattern: ^fmt\.Println$
 
 A larger set of interesting patterns might include:
 
-* `{Match: "type", Pattern: "^fmt\\.Print.*$"}` -- forbid use of Print statements because they are likely just for debugging
-* `{Match: "type", Pattern: "^fmt\\.Errorf$", Msg: "use github.com/pkg/errors"}` -- forbid Errorf in favor of using github.com/pkg/errors
-* `{Match: "type", Pattern: "^github.com/onsi/ginkgo(/v[[:digit:]]*)?)\\.F[A-Z].*$"}` -- forbid ginkgo focused commands (used for debug issues)
-* `{Match: "type", Pattern: "^github.com/davecgh/go-spew/spew\\.Dump$"}` -- forbid dumping detailed data to stdout
-* `{Match: "type", Pattern: "^github.com/davecgh/go-spew/spew.ConfigState\\.Dump"}` -- also forbid it via a `ConfigState`
-
-For backwards compatibility, the message may also get encoded inside the
-regular expression:
-
-* `{Match: "type", Pattern: "^fmt\\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
+-* `^fmt\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
+-* `^fmt\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
+-* `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
+-* `^spew\.Dump$` -- forbid dumping detailed data to stdout
+-* `^spew.ConfigState\.Dump$` -- also forbid it via a `ConfigState`
+-* `^fmt\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
+-* `{pattern: ^fmt\.Errorf$, msg: please use github.com/pkg/errors}` -- the same with separate msg field
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
 - **-exclude_godoc_examples** (default true) - Controls whether godoc examples are identified and excluded
 - **-tests** (default true) - Controls whether tests are included
+- **-expand_expressions** (default false) - Replace literal source code before matching
 
 ## Purpose
 

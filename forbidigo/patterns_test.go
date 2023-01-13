@@ -13,8 +13,8 @@ func TestParseValidPatterns(t *testing.T) {
 		name            string
 		ptrn            string
 		expectedComment string
-		expectedMatch   string
 		expectedPattern string
+		expectedPackage string
 	}{
 		{
 			name: "simple expression, no comment",
@@ -46,29 +46,26 @@ func TestParseValidPatterns(t *testing.T) {
 		},
 		{
 			name:            "match import",
-			ptrn:            `{Match: "type", Pattern: "^fmt\\.Println$"}`,
-			expectedMatch:   MatchType,
+			ptrn:            `{pattern: "^fmt\\.Println$"}`,
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name: "match import with YAML",
-			ptrn: `{Match: type,
-Pattern: ^fmt\.Println$
+			ptrn: `{msg: hello world,
+pattern: ^fmt\.Println$
 }`,
-			expectedMatch:   MatchType,
+			expectedComment: "hello world",
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name:            "match import with YAML, no line breaks",
-			ptrn:            `{Match: type, Pattern: ^fmt\.Println$}`,
-			expectedMatch:   MatchType,
+			ptrn:            `{pattern: ^fmt\.Println$}`,
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name: "simple YAML",
-			ptrn: `Match: type
-Pattern: ^fmt\.Println$`,
-			expectedMatch:   MatchType,
+			ptrn: `pattern: ^fmt\.Println$
+`,
 			expectedPattern: `^fmt\.Println$`,
 		},
 	} {
@@ -80,12 +77,10 @@ Pattern: ^fmt\.Println$`,
 				expectedPattern = tc.ptrn
 			}
 			assert.Equal(t, expectedPattern, ptrn.re.String(), "pattern")
-			assert.Equal(t, tc.expectedComment, ptrn.Msg, "comment")
-			expectedMatch := tc.expectedMatch
-			if expectedMatch == "" {
-				expectedMatch = MatchText
+			if assert.Equal(t, tc.expectedPackage, ptrn.Package, "package") && tc.expectedPackage != "" {
+				assert.Equal(t, tc.expectedPackage, ptrn.pkgRe.String(), "package RE")
 			}
-			assert.Equal(t, expectedMatch, ptrn.Match, "match ")
+			assert.Equal(t, tc.expectedComment, ptrn.Msg, "comment")
 		})
 	}
 }
@@ -101,7 +96,6 @@ func TestUnmarshalYAML(t *testing.T) {
 		yaml            string
 		expectedErr     string
 		expectedComment string
-		expectedMatch   string
 		expectedPattern string
 	}{
 		{
@@ -115,31 +109,25 @@ func TestUnmarshalYAML(t *testing.T) {
 		},
 		{
 			name:            "struct: simple expression, no comment",
-			yaml:            `Pattern: fmt\.Errorf`,
+			yaml:            `pattern: fmt\.Errorf`,
 			expectedPattern: `fmt\.Errorf`,
 		},
 		{
 			name: "match import with YAML",
-			yaml: `Match: type
-Pattern: ^fmt\.Println$
+			yaml: `pattern: ^fmt\.Println$
 `,
-			expectedMatch:   MatchType,
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name:        "string: invalid regexp",
 			yaml:        `fmt\`,
-			expectedErr: "unable to compile pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
+			expectedErr: "unable to compile source code pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
 		},
 		{
-			name:        "stuct: invalid regexp",
-			yaml:        `Pattern: fmt\`,
-			expectedErr: "unable to compile pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
-		},
-		{
-			name:        "invalid match",
-			yaml:        `Match: true`,
-			expectedErr: `unsupported match string: "true"`,
+			name: "struct: invalid regexp",
+			yaml: `pattern: fmt\
+`,
+			expectedErr: "unable to compile source code pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
 		},
 		{
 			name: "invalid struct",
@@ -165,11 +153,6 @@ Pattern: ^fmt\.Println$
 			}
 			assert.Equal(t, expectedPattern, p.re.String(), "pattern")
 			assert.Equal(t, tc.expectedComment, p.Msg, "comment")
-			expectedMatch := tc.expectedMatch
-			if expectedMatch == "" {
-				expectedMatch = MatchText
-			}
-			assert.Equal(t, expectedMatch, p.Match, "match ")
 		})
 	}
 }

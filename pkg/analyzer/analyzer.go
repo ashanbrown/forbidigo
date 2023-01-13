@@ -29,6 +29,7 @@ type analyzer struct {
 	patterns           []string
 	usePermitDirective bool
 	includeExamples    bool
+	expand             bool
 	debugLog           func(format string, args ...interface{})
 }
 
@@ -51,6 +52,7 @@ func newAnalyzer(debugLog func(format string, args ...interface{})) *analysis.An
 	flags.Var(&listVar{values: &a.patterns}, "p", "pattern")
 	flags.BoolVar(&a.includeExamples, "examples", false, "check godoc examples")
 	flags.BoolVar(&a.usePermitDirective, "permit", true, `when set, lines with "//permit" directives will be ignored`)
+	flags.BoolVar(&a.expand, "expand_expressions", false, `when set, expressions get expanded instead of matching the literal source code`)
 	return &analysis.Analyzer{
 		Name:  "forbidigo",
 		Doc:   "forbid identifiers",
@@ -74,7 +76,11 @@ func (a *analyzer) runAnalysis(pass *analysis.Pass) (interface{}, error) {
 	for _, f := range pass.Files {
 		nodes = append(nodes, f)
 	}
-	issues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: pass.Fset, TypesInfo: pass.TypesInfo, DebugLog: a.debugLog}, nodes...)
+	config := forbidigo.RunConfig{Fset: pass.Fset, DebugLog: a.debugLog}
+	if a.expand {
+		config.TypesInfo = pass.TypesInfo
+	}
+	issues, err := linter.RunWithConfig(config, nodes...)
 	if err != nil {
 		return nil, err
 	}

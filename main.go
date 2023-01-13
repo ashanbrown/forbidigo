@@ -16,6 +16,7 @@ func main() {
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
 	includeTests := flag.Bool("tests", true, "Include tests")
 	excludeGodocExamples := flag.Bool("exclude_godoc_examples", true, "Exclude code in godoc examples")
+	expand := flag.Bool("expand_expressions", false, "Replace the literal source code based on the semantic of the code before matching against patterns")
 	flag.Parse()
 
 	var patterns = []string(nil)
@@ -45,12 +46,8 @@ func main() {
 		Tests: *includeTests,
 	}
 
-	// Additional information may be needed for some patterns.
-	for _, pattern := range linter.Patterns() {
-		switch pattern.Match {
-		case forbidigo.MatchType:
-			cfg.Mode |= packages.NeedTypesInfo | packages.NeedDeps
-		}
+	if *expand {
+		cfg.Mode |= packages.NeedTypesInfo | packages.NeedDeps
 	}
 
 	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)

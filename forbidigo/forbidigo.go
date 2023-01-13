@@ -11,8 +11,10 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"path"
 
 	"github.com/pkg/errors"
+	"golang.org/x/mod/module"
 )
 
 type Issue interface {
@@ -115,8 +117,8 @@ type RunConfig struct {
 	// FSet is required.
 	Fset *token.FileSet
 
-	// TypesInfo is needed for "pkg" match patterns. Not providing it
-	// disables those patterns.
+	// TypesInfo is needed for expanding source code expressions.
+	// Nil disables that step, i.e. patterns match the literal source code.
 	TypesInfo *types.Info
 
 	// DebugLog is used to print debug messages. May be nil.
@@ -202,34 +204,14 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	}
 
 	// The text as it appears in the source is always used because issues
-	// use that. The other texts to match against are extracted when needed
-	// by a pattern. They are nil when not evaluated yet and point to
-	// the empty string when there is nothing to match against.
+	// use that. It's used for matching unless usage of type information
+	// is enabled.
 	srcText := v.textFor(node)
-	var pkgText *string
-	checkedPkgText := false
+	matchText, pkgText := v.updateText(node, srcText)
 	for _, p := range v.linter.patterns {
-		if p.Match == MatchType && !checkedPkgText {
-			pkgText = v.pkgTextFor(node)
-			if pkgText != nil {
-				v.runConfig.DebugLog("%s: %q -> %q", v.runConfig.Fset.Position(node.Pos()), srcText, *pkgText)
-			} else {
-				v.runConfig.DebugLog("%s: %q -> not expanded", v.runConfig.Fset.Position(node.Pos()), srcText)
-			}
-			checkedPkgText = true
-		}
-
-		matchText := ""
-		switch {
-		case p.Match == MatchType:
-			if pkgText == nil {
-				continue
-			}
-			matchText = *pkgText
-		default:
-			matchText = srcText
-		}
-		if p.re.MatchString(matchText) && !v.permit(node) {
+		if p.re.MatchString(matchText) &&
+			(p.Package == "" || p.pkgRe.MatchString(pkgText)) &&
+			!v.permit(node) {
 			v.issues = append(v.issues, UsedIssue{
 				identifier: srcText, // Always report the expression as it appears in the source code.
 				pattern:    p.re.String(),
@@ -258,12 +240,18 @@ func (v *visitor) textFor(node ast.Node) string {
 // - example.com/some/pkg.Function
 // - example.com/some/pkg.CustomType.Method
 //
-// It returns nil when the text is not available, otherwise a pointer to
-// the string to match against.
-func (v *visitor) pkgTextFor(node ast.Node) *string {
+// It updates the text to match against and fills the package string if possible,
+// otherwise it just returns.
+func (v *visitor) updateText(node ast.Node, srcText string) (matchText, pkgText string) {
+	// The text to match against is the literal source code if we cannot
+	// come up with something different.
+	matchText = srcText
+
 	if v.runConfig.TypesInfo == nil {
-		return nil
+		return
 	}
+
+	location := v.runConfig.Fset.Position(node.Pos())
 
 	// TODO: do type switch here instead of multiple if checks.
 	if ident, ok := node.(*ast.Ident); ok {
@@ -272,26 +260,36 @@ func (v *visitor) pkgTextFor(node ast.Node) *string {
 			// No information about the identifier. Should
 			// not happen, but perhaps there were compile
 			// errors?
-			return nil
+			v.runConfig.DebugLog("%s: unknown identifier %q", location, srcText)
+			return
 		}
-		str := object.Name()
 		if pkg := object.Pkg(); pkg != nil {
-			str = pkg.Path() + "." + str
+			matchText = importPathBase(pkg.Path()) + "." + object.Name()
+			pkgText = pkg.Path()
+			v.runConfig.DebugLog("%s: identifier: %q -> %q in package %q", location, srcText, matchText, pkgText)
+		} else {
+			matchText = object.Name()
+			v.runConfig.DebugLog("%s: identifier: %q -> %q without package", location, srcText, matchText)
 		}
-		return &str
+		return
 	}
 	selectorExpr, ok := node.(*ast.SelectorExpr)
 	if !ok {
-
-		return nil
+		v.runConfig.DebugLog("%s: not a selector", location)
+		return
 	}
 	selector := selectorExpr.X
-	var pkgText string
+	field := selectorExpr.Sel.Name
 
 	// If we are lucky, the entire selector expression has a known
 	// type. We don't care about the value.
+	selectorText := v.textFor(selector)
 	if typeAndValue, ok := v.runConfig.TypesInfo.Types[selector]; ok {
-		pkgText = typeAndValue.Type.String()
+		prefix := typeAndValue.Type.String()
+		matchText = finalizeSelectorText(prefix, field)
+		pkgText = pkgFromType(typeAndValue.Type)
+		v.runConfig.DebugLog("%s: selector %q with known type %q: %q -> %q, package %q", location, selectorText, prefix, srcText, matchText, pkgText)
+		return
 	} else {
 		// Some expressions need special treatment.
 		switch selector := selector.(type) {
@@ -301,26 +299,80 @@ func (v *visitor) pkgTextFor(node ast.Node) *string {
 				// No information about the identifier. Should
 				// not happen, but perhaps there were compile
 				// errors?
-				return nil
+				return
 			}
 			switch object := object.(type) {
 			case *types.PkgName:
 				pkgText = object.Imported().Path()
+				matchText = finalizeSelectorText(pkgText, field)
+				v.runConfig.DebugLog("%s: selector %q is package: %q -> %q, package %q", location, selectorText, srcText, matchText, pkgText)
+				return
 			case *types.Var:
-				pkgText = object.Type().String()
+				prefix := object.Type().String()
+				matchText = finalizeSelectorText(prefix, field)
+				pkgText = pkgFromType(object.Type())
+				v.runConfig.DebugLog("%s: selector %q is variable of type %q: %q -> %q, package %q", location, selectorText, prefix, srcText, matchText, pkgText)
+				return
 			default:
 				// Something else?
-				return nil
+				v.runConfig.DebugLog("%s: selector %q is identifier with unsupported type %T", location, selectorText, object)
+				return
 			}
 		default:
-			return nil
+			v.runConfig.DebugLog("%s: selector %q of unsupported type %T", location, selectorText, selector)
+			return
 		}
 	}
+}
+
+// importPathBase returns the last element of a package import path. It ignores
+// a version suffix. The path string must be valid.
+func importPathBase(p string) string {
+	// Keep only the path, not the version. We don't need to check
+	// for success, this cannot fail.
+	p, _, _ = module.SplitPathVersion(p)
+	// Keep the last path element.
+	p = path.Base(p)
+	return p
+}
+
+// pkgFromType tries to deduce the package name from a type.
+func pkgFromType(t types.Type) string {
+	// "Parsing" the string representation isn't ideal, but
+	// the generic Type interface doesn't have anything better.
+	typeString := t.String()
+
+	// The type name, in contrast to path elements, may not contain a dot,
+	// so use the last dot as separator.
+	dot := strings.LastIndex(typeString, ".")
+	if dot < 0 {
+		return ""
+	}
+	pkgText := typeString[:dot]
 
 	// Ignore whether it is a pointer.
 	pkgText = strings.TrimLeft(pkgText, "*")
-	pkgText += "." + selectorExpr.Sel.Name
-	return &pkgText
+
+	// The type is not necessarily <package>.<identifier>. It could also
+	// be a local, unexported type. Sanity check that.
+	if err := module.CheckImportPath(pkgText); err != nil {
+		return ""
+	}
+	return pkgText
+}
+
+// composeSelectorText takes the type prefix, simplifies it and combines it
+// with the field inside that type.
+func finalizeSelectorText(prefix, field string) string {
+	// Ignore whether it is a pointer.
+	prefix = strings.TrimLeft(prefix, "*")
+	// Simplify import paths, and only import paths. The prefix might also
+	// be something like `struct{...}` for a method call with a local
+	// struct.
+	if err := module.CheckImportPath(prefix); err == nil {
+		prefix = importPathBase(prefix)
+	}
+	return prefix + "." + field
 }
 
 func (v *visitor) permit(node ast.Node) bool {
@@ -337,3 +389,4 @@ func (v *visitor) permit(node ast.Node) bool {
 	}
 	return false
 }
+
