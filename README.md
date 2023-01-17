@@ -1,5 +1,7 @@
 # forbidigo
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/ashanbrown/forbidigo/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/ashanbrown/forbidigo/tree/master)
+
 `forbidigo` is a Go static analysis tool to forbidigo use of particular identifiers.
 
 `forbidigo` is recommended to be run as part of [golangci-lint](https://github.com/golangci/golangci-lint) where it can be controlled using file-based configuration and `//nolint` directives, but it can also be run as a standalone tool.
