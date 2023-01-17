@@ -49,7 +49,7 @@ func Foo() {
 	myCustomFunc().AlsoForbidden() // want "myCustomFunc...AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Type alias and pointer.
-	c2 := &anotherpkg.CustomType{}
+	c2 := &anotherpkg.CustomTypeAlias{}
 	c2.AlsoForbidden() // want "c2.AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Interface.
