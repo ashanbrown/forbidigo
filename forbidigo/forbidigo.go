@@ -123,11 +123,6 @@ type RunConfig struct {
 	DebugLog func(format string, args ...interface{})
 }
 
-// Patterns returns the parsed patterns.
-func (l *Linter) Patterns() []*Pattern {
-	return l.patterns
-}
-
 func (l *Linter) RunWithConfig(config RunConfig, nodes ...ast.Node) ([]Issue, error) {
 	if config.DebugLog == nil {
 		config.DebugLog = func(format string, args ...interface{}) {}
