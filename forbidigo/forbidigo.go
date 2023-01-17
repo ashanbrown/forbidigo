@@ -201,6 +201,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	// is enabled.
 	srcText := v.textFor(node)
 	matchText, pkgText := v.expandMatchText(node, srcText)
+	v.runConfig.DebugLog("%s: match %q, package %q", v.runConfig.Fset.Position(node.Pos()), matchText, pkgText)
 	for _, p := range v.linter.patterns {
 		if p.re.MatchString(matchText) &&
 			(p.Package == "" || p.pkgRe.MatchString(pkgText)) &&
