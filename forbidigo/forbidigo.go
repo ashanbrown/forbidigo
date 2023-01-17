@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"path"
 	"regexp"
 	"strings"
 
@@ -119,6 +120,10 @@ type RunConfig struct {
 	// Nil disables that step, i.e. patterns match the literal source code.
 	TypesInfo *types.Info
 
+	// Pkg is needed for "ignore" glob patterns. Not providing it
+	// causes file globs to be ignore.
+	Pkg *types.Package
+
 	// DebugLog is used to print debug messages. May be nil.
 	DebugLog func(format string, args ...interface{})
 }
@@ -200,10 +205,17 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	// use that. It's used for matching unless usage of type information
 	// is enabled.
 	srcText := v.textFor(node)
+	filename := ""
+	if v.runConfig.Pkg != nil {
+		pkgPath := v.runConfig.Pkg.Path()
+		pos := v.runConfig.Fset.Position(node.Pos())
+		filename = pkgPath + "/" + path.Base(pos.Filename)
+	}
 	matchTexts, pkgText := v.expandMatchText(node, srcText)
-	v.runConfig.DebugLog("%s: match %v, package %q", v.runConfig.Fset.Position(node.Pos()), matchTexts, pkgText)
+	v.runConfig.DebugLog("%s: match %v, package %q, filename %q", v.runConfig.Fset.Position(node.Pos()), matchTexts, pkgText, filename)
 	for _, p := range v.linter.patterns {
 		if p.matches(matchTexts) &&
+			(filename == "" || !p.ignoreFile(filename)) &&
 			(p.Package == "" || p.pkgRe.MatchString(pkgText)) &&
 			!v.permit(node) {
 			v.issues = append(v.issues, UsedIssue{

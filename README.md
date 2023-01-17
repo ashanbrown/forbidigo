@@ -101,6 +101,12 @@ The full pattern struct has the following fields:
 * `package`: a regular expression for the full package import path. The package
   path includes the package version if the package has a version >= 2. This is
   only supported when `analyze_types` is enabled.
+* `ignore`: a list of [file glob
+  strings](https://github.com/bmatcuk/doublestar#patterns). If a glob string
+  matches `<package>/<file name>`, the pattern is ignored for the file that is
+  being analyzed. A glob string that starts with `!` reverts that. All glob
+  strings are checked one-by-one and the end result is then used to decide
+  whether the pattern applies.
 
 To distinguish such patterns from traditional regular expression patterns, the
 encoding must start with a `{` or contain line breaks. When using just JSON
@@ -121,6 +127,7 @@ isn't necessary. The following pattern strings are equivalent:
 A larger set of interesting patterns might include:
 
 -* `^fmt\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
+-* `{pattern: ^fmt\.Print.*$ ignore: ["**/main.go"]}` -- forbid use of Print statements in all files except main.go
 -* `^fmt\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
 -* `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
 -* `^spew\.Dump$` -- forbid dumping detailed data to stdout

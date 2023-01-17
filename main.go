@@ -61,7 +61,7 @@ func main() {
 		for _, n := range p.Syntax {
 			nodes = append(nodes, n)
 		}
-		newIssues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo}, nodes...)
+		newIssues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo, Pkg: p.Types}, nodes...)
 		if err != nil {
 			log.Fatalf("failed: %s", err)
 		}

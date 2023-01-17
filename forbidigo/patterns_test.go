@@ -1,6 +1,7 @@
 package forbidigo
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,7 @@ func TestParseValidPatterns(t *testing.T) {
 		expectedComment string
 		expectedPattern string
 		expectedPackage string
+		expectedFile    []string
 	}{
 		{
 			name: "simple expression, no comment",
@@ -67,6 +69,12 @@ p: ^fmt\.Println$
 			ptrn: `p: ^fmt\.Println$
 `,
 			expectedPattern: `^fmt\.Println$`,
+		},
+		{
+			name:            "match import with YAML and file filter",
+			ptrn:            `{p: ^fmt\.Println$, ignore: ["**", "!**/main.go"]}`,
+			expectedPattern: `^fmt\.Println$`,
+			expectedFile:    []string{`**`, `!**/main.go`},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -153,6 +161,72 @@ func TestUnmarshalYAML(t *testing.T) {
 			}
 			assert.Equal(t, expectedPattern, p.re.String(), "pattern")
 			assert.Equal(t, tc.expectedComment, p.Msg, "comment")
+		})
+	}
+}
+
+func TestGlob(t *testing.T) {
+	testcases := map[string]struct {
+		ignore           []string
+		expectError      bool
+		expectIgnoreFile map[string]bool
+	}{
+		"disable": {
+			ignore: []string{"main.go"},
+			expectIgnoreFile: map[string]bool{
+				"main.go":  true,
+				"hello.go": false,
+			},
+		},
+		"enable": {
+			ignore: []string{"*", "!main.go"},
+			expectIgnoreFile: map[string]bool{
+				"main.go":  false,
+				"hello.go": true,
+			},
+		},
+		"all": {
+			ignore: []string{},
+			expectIgnoreFile: map[string]bool{
+				"main.go":  false,
+				"hello.go": false,
+			},
+		},
+		"double": {
+			ignore: []string{"**/main.go"},
+			expectIgnoreFile: map[string]bool{
+				"example.com/hello/main.go": true,
+			},
+		},
+	}
+
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			p := pattern{
+				Pattern: "unused",
+				Ignore:  tc.ignore,
+			}
+			if err := p.validate(); err != nil {
+				if !tc.expectError {
+					t.Fatalf("unexpected validation error: %v", err)
+				}
+			} else {
+				if tc.expectError {
+					t.Fatal("validation unexpectedly succeeded")
+				}
+			}
+
+			for file, expectIgnore := range tc.expectIgnoreFile {
+				t.Run(strings.ReplaceAll(file, "/", "-"), func(t *testing.T) {
+					ignore := p.ignoreFile(file)
+					if expectIgnore && !ignore {
+						t.Fatal("expected file to be ignored")
+					}
+					if !expectIgnore && ignore {
+						t.Fatal("expected file not to be ignored")
+					}
+				})
+			}
 		})
 	}
 }

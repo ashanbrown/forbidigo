@@ -126,6 +126,34 @@ func Example() {
 		assert.NotEmpty(t, issues)
 	})
 
+	t.Run("Skip file based on glob", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`{p: fmt\.Printf, ignore: ["**/file.go"]}`})
+		issues := parseFile(t, linter, false, "file.go", `
+package bar
+
+func TestFoo() {
+	fmt.Printf("here i am")
+}
+
+func Example() {
+}`)
+		assert.Empty(t, issues)
+	})
+
+	t.Run("Check file based on glob", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`{p: fmt\.Printf, ignore: ["!**/file.go"]}`})
+		issues := parseFile(t, linter, false, "file.go", `
+package bar
+
+func TestFoo() {
+	fmt.Printf("here i am")
+}
+
+func Example() {
+}`)
+		assert.NotEmpty(t, issues)
+	})
+
 	t.Run("Benchmark functions prevent a file from being considered a whole file example", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`})
 		issues := parseFile(t, linter, false, "file_test.go", `
@@ -230,7 +258,7 @@ func parseFile(t *testing.T, linter *Linter, expand bool, fileName, contents str
 		for _, n := range p.Syntax {
 			nodes = append(nodes, n)
 		}
-		newIssues, err := linter.RunWithConfig(RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo, DebugLog: t.Logf}, nodes...)
+		newIssues, err := linter.RunWithConfig(RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo, DebugLog: t.Logf, Pkg: p.Types}, nodes...)
 		if err != nil {
 			t.Fatalf("failed: %s", err)
 		}

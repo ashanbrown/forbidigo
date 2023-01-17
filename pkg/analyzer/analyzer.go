@@ -76,7 +76,7 @@ func (a *analyzer) runAnalysis(pass *analysis.Pass) (interface{}, error) {
 	for _, f := range pass.Files {
 		nodes = append(nodes, f)
 	}
-	config := forbidigo.RunConfig{Fset: pass.Fset, DebugLog: a.debugLog}
+	config := forbidigo.RunConfig{Fset: pass.Fset, DebugLog: a.debugLog, Pkg: pass.Pkg}
 	if a.expand {
 		config.TypesInfo = pass.TypesInfo
 	}

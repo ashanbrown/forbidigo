@@ -11,7 +11,7 @@ func TestLiteralAnalyzer(t *testing.T) {
 	testdata := analysistest.TestData()
 	patterns := append(forbidigo.DefaultPatterns(),
 		`^pkg\.Forbidden$`,
-		`^Shiny`,
+		`{p: ^Shiny, ignore: ["**/ignored.go"]}`,
 		`^AlsoShiny`,
 		`^renamed\.Forbidden`,
 	)

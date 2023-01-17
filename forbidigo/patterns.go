@@ -7,6 +7,13 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v2"
+
+	// The standard library does not support ** for matching slashes,
+	// something that we need to support matching any file.  doublestar was
+	// mentioned in
+	// https://github.com/golang/go/issues/11862#issuecomment-1207510648 as
+	// an alternative.
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 // pattern matches code that is not supposed to be used.
@@ -26,6 +33,14 @@ type pattern struct {
 	// Msg gets printed in addition to the normal message if a match is
 	// found.
 	Msg string `yaml:"msg,omitempty"`
+
+	// Ignore determines which source code files this pattern applies to.
+	// If a glob string matches `<package>/<file name>`, the pattern is
+	// ignored for the file that is being analyzed. A glob string that
+	// starts with `!` reverts that. All glob string are checked one-by-one
+	// and the end result is then used to decide whether the pattern
+	// applies.
+	Ignore []string `yaml:"ignore,omitempty"`
 }
 
 // A yamlPattern pattern in a YAML string may be represented either by a string
@@ -97,6 +112,12 @@ func (p *pattern) validate() error {
 		p.pkgRe = pkgRe
 	}
 
+	for i, glob := range p.Ignore {
+		if !doublestar.ValidatePattern(glob) {
+			return fmt.Errorf("file glob pattern #%d is invalid: %q", i, glob)
+		}
+	}
+
 	return nil
 }
 
@@ -124,4 +145,30 @@ func extractComment(re *syntax.Regexp) string {
 		}
 	}
 	return ""
+}
+
+func (p *pattern) ignoreFile(filename string) bool {
+	ignore := false
+	for _, glob := range p.Ignore {
+		if strings.HasPrefix(glob, "!") {
+			if !ignore {
+				// No need to match, nothing would change.
+				continue
+			}
+			// The glob was validated, matching cannot fail.
+			if ok, _ := doublestar.Match(glob[1:], filename); ok {
+				ignore = false
+			}
+		} else {
+			if ignore {
+				// No need to match, nothing would change.
+				continue
+			}
+			// The glob was validated, matching cannot fail.
+			if ok, _ := doublestar.Match(glob, filename); ok {
+				ignore = true
+			}
+		}
+	}
+	return ignore
 }
