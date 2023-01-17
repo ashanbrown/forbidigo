@@ -6,7 +6,7 @@ import (
 
 	anotherpkg "example.com/another/pkg"
 	somepkg "example.com/some/pkg"
-	renamed "example.com/some/renamedpkg" // Package name is "renamed".
+	"example.com/some/renamedpkg" // Package name is "renamed".
 	. "example.com/some/thing"
 )
 

@@ -2,7 +2,6 @@ package forbidigo
 
 import (
 	"go/ast"
-	"log"
 	"os"
 	"path"
 	"regexp"
@@ -231,7 +230,7 @@ func parseFile(t *testing.T, linter *Linter, expand bool, fileName, contents str
 		}
 		newIssues, err := linter.RunWithConfig(RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo, DebugLog: t.Logf}, nodes...)
 		if err != nil {
-			log.Fatalf("failed: %s", err)
+			t.Fatalf("failed: %s", err)
 		}
 		issues = append(issues, newIssues...)
 	}

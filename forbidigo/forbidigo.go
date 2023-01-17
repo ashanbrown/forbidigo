@@ -200,7 +200,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	// use that. It's used for matching unless usage of type information
 	// is enabled.
 	srcText := v.textFor(node)
-	matchText, pkgText := v.updateText(node, srcText)
+	matchText, pkgText := v.expandMatchText(node, srcText)
 	for _, p := range v.linter.patterns {
 		if p.re.MatchString(matchText) &&
 			(p.Package == "" || p.pkgRe.MatchString(pkgText)) &&
@@ -227,7 +227,7 @@ func (v *visitor) textFor(node ast.Node) string {
 	return buf.String()
 }
 
-// pkgTextFor expands the selector in a selector expression to the full package
+// expandMatchText expands the selector in a selector expression to the full package
 // name and (for variables) the type:
 //
 // - example.com/some/pkg.Function
@@ -235,7 +235,7 @@ func (v *visitor) textFor(node ast.Node) string {
 //
 // It updates the text to match against and fills the package string if possible,
 // otherwise it just returns.
-func (v *visitor) updateText(node ast.Node, srcText string) (matchText, pkgText string) {
+func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchText, pkgText string) {
 	// The text to match against is the literal source code if we cannot
 	// come up with something different.
 	matchText = srcText
