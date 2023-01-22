@@ -215,7 +215,9 @@ func parseFile(t *testing.T, linter *Linter, expand bool, fileName, contents str
 	}
 	pwd, err := os.Getwd()
 	require.NoError(t, err)
-	defer os.Chdir(pwd)
+	defer func() {
+		_ = os.Chdir(pwd)
+	}()
 	err = os.Chdir(tmpDir)
 	require.NoError(t, err)
 	pkgs, err := packages.Load(&cfg, ".")
