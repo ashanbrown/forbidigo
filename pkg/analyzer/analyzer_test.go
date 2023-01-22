@@ -26,14 +26,15 @@ func TestLiteralAnalyzer(t *testing.T) {
 func TestExpandAnalyzer(t *testing.T) {
 	testdata := analysistest.TestData()
 	patterns := append(forbidigo.DefaultPatterns(),
-		`{pattern: ^pkg\.Forbidden$, package: ^example.com/some/pkg$}`,
-		`{pattern: ^pkg\.CustomType.*Forbidden.*$, package: ^example.com/some/pkg$}`,
-		`{pattern: ^pkg\.CustomInterface.*Forbidden$, package: ^example.com/some/pkg$}`,
-		`{pattern: ^thing\.Shiny, package: ^example.com/some/thing$}`,
-		`{pattern: myCustomStruct\..*Forbidden, package: ^expandtext$}`,
-		`{pattern: myCustomInterface\.AlsoForbidden, package: ^expandtext$}`,
-		`{pattern: renamed\.Forbidden, package: ^example.com/some/renamedpkg$}`,
-		`{pattern: renamed\.Struct.Forbidden, package: ^example.com/some/renamedpkg$}`,
+		`{p: ^pkg\.Forbidden$, pkg: ^example.com/some/pkg$}`,
+		`{p: ^pkg\.CustomType.*Forbidden.*$, pkg: ^example.com/some/pkg$}`,
+		`{p: ^pkg\.CustomInterface.*Forbidden$, pkg: ^example.com/some/pkg$}`,
+		`{p: ^Shiny, pkg: ^example.com/some/thing$}`,
+		`{p: ^thing.AlsoShiny}`,
+		`{p: myCustomStruct\..*Forbidden, pkg: ^expandtext$}`,
+		`{p: myCustomInterface\.AlsoForbidden, pkg: ^expandtext$}`,
+		`{p: renamed\.Forbidden, pkg: ^example.com/some/renamedpkg$}`,
+		`{p: renamed\.Struct.Forbidden, pkg: ^example.com/some/renamedpkg$}`,
 	)
 	a := newAnalyzer(t.Logf)
 	for _, pattern := range patterns {

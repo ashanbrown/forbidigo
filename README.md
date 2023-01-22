@@ -103,16 +103,16 @@ encoding must start with a `{` or contain line breaks. When using just JSON
 encoding, backslashes must get quoted inside strings. When using YAML, this
 isn't necessary. The following pattern strings are equivalent:
 
-    {msg: "do not write to stdout", Pattern: "^fmt\\.Println$"}
+    {p: "^fmt\\.Println$", msg: "do not write to stdout"}
 
-    {msg: do not write to stdout,
-    Pattern: ^fmt\.Println$
+    {p: ^fmt\.Println$,
+     msg: do not write to stdout,
     }
 
-    {msg: do not write to stdout, pattern: ^fmt\.Println$}
+    {p: ^fmt\.Println$, msg: do not write to stdout}
 
+    p: ^fmt\.Println$
     msg: do not write to stdout
-    pattern: ^fmt\.Println$
 
 A larger set of interesting patterns might include:
 
@@ -122,7 +122,7 @@ A larger set of interesting patterns might include:
 -* `^spew\.Dump$` -- forbid dumping detailed data to stdout
 -* `^spew.ConfigState\.Dump$` -- also forbid it via a `ConfigState`
 -* `^fmt\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
--* `{pattern: ^fmt\.Errorf$, msg: please use github.com/pkg/errors}` -- the same with separate msg field
+-* `{p: ^fmt\.Errorf$, msg: please use github.com/pkg/errors}` -- the same with separate msg field
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.

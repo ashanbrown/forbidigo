@@ -46,25 +46,25 @@ func TestParseValidPatterns(t *testing.T) {
 		},
 		{
 			name:            "match import",
-			ptrn:            `{pattern: "^fmt\\.Println$"}`,
+			ptrn:            `{p: "^fmt\\.Println$"}`,
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name: "match import with YAML",
 			ptrn: `{msg: hello world,
-pattern: ^fmt\.Println$
+p: ^fmt\.Println$
 }`,
 			expectedComment: "hello world",
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name:            "match import with YAML, no line breaks",
-			ptrn:            `{pattern: ^fmt\.Println$}`,
+			ptrn:            `{p: ^fmt\.Println$}`,
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
 			name: "simple YAML",
-			ptrn: `pattern: ^fmt\.Println$
+			ptrn: `p: ^fmt\.Println$
 `,
 			expectedPattern: `^fmt\.Println$`,
 		},
@@ -109,12 +109,12 @@ func TestUnmarshalYAML(t *testing.T) {
 		},
 		{
 			name:            "struct: simple expression, no comment",
-			yaml:            `pattern: fmt\.Errorf`,
+			yaml:            `p: fmt\.Errorf`,
 			expectedPattern: `fmt\.Errorf`,
 		},
 		{
 			name: "match import with YAML",
-			yaml: `pattern: ^fmt\.Println$
+			yaml: `p: ^fmt\.Println$
 `,
 			expectedPattern: `^fmt\.Println$`,
 		},
@@ -125,7 +125,7 @@ func TestUnmarshalYAML(t *testing.T) {
 		},
 		{
 			name: "struct: invalid regexp",
-			yaml: `pattern: fmt\
+			yaml: `p: fmt\
 `,
 			expectedErr: "unable to compile source code pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
 		},

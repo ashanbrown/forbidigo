@@ -200,19 +200,21 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	// use that. It's used for matching unless usage of type information
 	// is enabled.
 	srcText := v.textFor(node)
-	matchText, pkgText := v.expandMatchText(node, srcText)
-	v.runConfig.DebugLog("%s: match %q, package %q", v.runConfig.Fset.Position(node.Pos()), matchText, pkgText)
+	matchTexts, pkgText := v.expandMatchText(node, srcText)
+	v.runConfig.DebugLog("%s: match %v, package %q", v.runConfig.Fset.Position(node.Pos()), matchTexts, pkgText)
 	for _, p := range v.linter.patterns {
-		if p.re.MatchString(matchText) &&
-			(p.Package == "" || p.pkgRe.MatchString(pkgText)) &&
-			!v.permit(node) {
-			v.issues = append(v.issues, UsedIssue{
-				identifier: srcText, // Always report the expression as it appears in the source code.
-				pattern:    p.re.String(),
-				pos:        node.Pos(),
-				position:   v.runConfig.Fset.Position(node.Pos()),
-				customMsg:  p.Msg,
-			})
+		for _, matchText := range matchTexts {
+			if p.re.MatchString(matchText) &&
+				(p.Package == "" || p.pkgRe.MatchString(pkgText)) &&
+				!v.permit(node) {
+				v.issues = append(v.issues, UsedIssue{
+					identifier: srcText, // Always report the expression as it appears in the source code.
+					pattern:    p.re.String(),
+					pos:        node.Pos(),
+					position:   v.runConfig.Fset.Position(node.Pos()),
+					customMsg:  p.Msg,
+				})
+			}
 		}
 	}
 	return nil
@@ -236,13 +238,13 @@ func (v *visitor) textFor(node ast.Node) string {
 //
 // It updates the text to match against and fills the package string if possible,
 // otherwise it just returns.
-func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchText, pkgText string) {
+func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []string, pkgText string) {
 	// The text to match against is the literal source code if we cannot
 	// come up with something different.
-	matchText = srcText
+	matchText := srcText
 
 	if v.runConfig.TypesInfo == nil {
-		return
+		return []string{matchText}, pkgText
 	}
 
 	location := v.runConfig.Fset.Position(node.Pos())
@@ -255,22 +257,22 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchText, pkg
 			// not happen, but perhaps there were compile
 			// errors?
 			v.runConfig.DebugLog("%s: unknown identifier %q", location, srcText)
-			return
+			return []string{matchText}, pkgText
 		}
 		if pkg := object.Pkg(); pkg != nil {
-			matchText = pkg.Name() + "." + object.Name()
 			pkgText = pkg.Path()
 			v.runConfig.DebugLog("%s: identifier: %q -> %q in package %q", location, srcText, matchText, pkgText)
+			// match either with or without package name
+			return []string{pkg.Name() + "." + srcText, srcText}, pkgText
 		} else {
 			v.runConfig.DebugLog("%s: identifier: %q -> %q without package", location, srcText, matchText)
-			return
 		}
-		return
+		return []string{matchText}, pkgText
 	}
 	selectorExpr, ok := node.(*ast.SelectorExpr)
 	if !ok {
 		v.runConfig.DebugLog("%s: not a selector", location)
-		return
+		return []string{matchText}, pkgText
 	}
 	selector := selectorExpr.X
 	field := selectorExpr.Sel.Name
@@ -286,7 +288,7 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchText, pkg
 		matchText = m + "." + field
 		pkgText = p
 		v.runConfig.DebugLog("%s: selector %q with supported type %q: %q -> %q, package %q", location, selectorText, typeAndValue.Type.String(), srcText, matchText, pkgText)
-		return
+		return []string{matchText}, pkgText
 	} else {
 		// Some expressions need special treatment.
 		switch selector := selector.(type) {
@@ -297,14 +299,14 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchText, pkg
 				// not happen, but perhaps there were compile
 				// errors?
 				v.runConfig.DebugLog("%s: unknown selector identifier %q", location, selectorText)
-				return
+				return []string{matchText}, pkgText
 			}
 			switch object := object.(type) {
 			case *types.PkgName:
 				pkgText = object.Imported().Path()
 				matchText = object.Imported().Name() + "." + field
 				v.runConfig.DebugLog("%s: selector %q is package: %q -> %q, package %q", location, selectorText, srcText, matchText, pkgText)
-				return
+				return []string{matchText}, pkgText
 			case *types.Var:
 				m, p, ok := pkgFromType(typeAndValue.Type)
 				if !ok {
@@ -313,16 +315,14 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchText, pkg
 				matchText = m + "." + field
 				pkgText = p
 				v.runConfig.DebugLog("%s: selector %q is variable of type %q: %q -> %q, package %q", location, selectorText, typeAndValue.Type.String(), srcText, matchText, pkgText)
-				return
 			default:
 				// Something else?
 				v.runConfig.DebugLog("%s: selector %q is identifier with unsupported type %T", location, selectorText, object)
-				return
 			}
 		default:
 			v.runConfig.DebugLog("%s: selector %q of unsupported type %T", location, selectorText, selector)
-			return
 		}
+		return []string{matchText}, pkgText
 	}
 }
 
@@ -341,7 +341,7 @@ func pkgFromType(t types.Type) (typeStr, pkgStr string, ok bool) {
 		if pkg == nil {
 			return "", "", false
 		}
-		return pkg.Name()+"."+obj.Name(), pkg.Path(), true
+		return pkg.Name() + "." + obj.Name(), pkg.Path(), true
 	default:
 		return "", "", false
 	}
@@ -361,4 +361,3 @@ func (v *visitor) permit(node ast.Node) bool {
 	}
 	return false
 }
-

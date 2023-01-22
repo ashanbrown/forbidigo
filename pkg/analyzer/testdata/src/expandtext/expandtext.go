@@ -26,7 +26,8 @@ type myCustomInterface interface {
 
 var forbiddenFunctionRef = somepkg.Forbidden // want "somepkg.Forbidden.*forbidden by pattern .*\\^pkg.*Forbidden"
 
-var forbiddenVariableRef = Shiny // want "Shiny.*forbidden by pattern.*\\^thing.*Shiny"
+var forbiddenVariableRef = Shiny      // want "Shiny.*forbidden by pattern.*\\^Shiny"
+var forbiddenVariableRef2 = AlsoShiny // want "Shiny.*forbidden by pattern.*\\^thing.AlsoShiny"
 
 func Foo() {
 	fmt.Println("here I am") // want "forbidden by pattern"

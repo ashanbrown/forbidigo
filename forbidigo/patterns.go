@@ -1,11 +1,11 @@
 package forbidigo
 
 import (
+	"encoding"
 	"fmt"
 	"regexp"
 	"regexp/syntax"
 	"strings"
-	"encoding"
 
 	"gopkg.in/yaml.v2"
 )
@@ -17,12 +17,12 @@ type Pattern struct {
 	// Pattern is the regular expression string that is used for matching.
 	// It gets matched against the literal source code text or the expanded
 	// text, depending on the mode in which the analyzer runs.
-	Pattern string `yaml:"pattern" mapstructure:"pattern"`
+	Pattern string `yaml:"p" mapstructure:"p"`
 
 	// Package is a regular expression for the full package path of
 	// an imported item. Ignored unless the analyzer is configured to
 	// determine that information.
-	Package string `yaml:"package,omitempty" mapstructure:"package,omitempty"`
+	Package string `yaml:"pkg,omitempty" mapstructure:"pkg,omitempty"`
 
 	// Msg gets printed in addition to the normal message if a match is
 	// found.
