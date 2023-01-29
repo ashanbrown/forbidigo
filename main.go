@@ -16,6 +16,7 @@ func main() {
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
 	includeTests := flag.Bool("tests", true, "Include tests")
 	excludeGodocExamples := flag.Bool("exclude_godoc_examples", true, "Exclude code in godoc examples")
+	expand := flag.Bool("analyze_types", false, "Replace the literal source code based on the semantic of the code before matching against patterns")
 	flag.Parse()
 
 	var patterns = []string(nil)
@@ -32,15 +33,6 @@ func main() {
 	if patterns == nil {
 		patterns = forbidigo.DefaultPatterns()
 	}
-
-	cfg := packages.Config{
-		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
-		Tests: *includeTests,
-	}
-	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
-	if err != nil {
-		log.Fatalf("Could not load packages: %s", err)
-	}
 	options := []forbidigo.Option{
 		forbidigo.OptionExcludeGodocExamples(*excludeGodocExamples),
 	}
@@ -49,13 +41,27 @@ func main() {
 		log.Fatalf("Could not create linter: %s", err)
 	}
 
+	cfg := packages.Config{
+		Mode:  packages.NeedSyntax | packages.NeedName | packages.NeedFiles | packages.NeedTypes,
+		Tests: *includeTests,
+	}
+
+	if *expand {
+		cfg.Mode |= packages.NeedTypesInfo | packages.NeedDeps
+	}
+
+	pkgs, err := packages.Load(&cfg, flag.Args()[firstPkg:]...)
+	if err != nil {
+		log.Fatalf("Could not load packages: %s", err)
+	}
+
 	var issues []forbidigo.Issue
 	for _, p := range pkgs {
 		nodes := make([]ast.Node, 0, len(p.Syntax))
 		for _, n := range p.Syntax {
 			nodes = append(nodes, n)
 		}
-		newIssues, err := linter.Run(p.Fset, nodes...)
+		newIssues, err := linter.RunWithConfig(forbidigo.RunConfig{Fset: p.Fset, TypesInfo: p.TypesInfo}, nodes...)
 		if err != nil {
 			log.Fatalf("failed: %s", err)
 		}
