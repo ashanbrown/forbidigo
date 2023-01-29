@@ -3,7 +3,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: cimg/go:1.17.7
+      - image: cimg/go:1.19.5
     steps:
       - checkout
       - run: sudo apt-get update && sudo apt-get -y -qq install python pip
