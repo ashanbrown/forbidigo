@@ -121,12 +121,11 @@ isn't necessary. The following pattern strings are equivalent:
 A larger set of interesting patterns might include:
 
 -* `^fmt\.Print.*$` -- forbid use of Print statements because they are likely just for debugging
--* `^fmt\.Errorf$` -- forbid Errorf in favor of using github.com/pkg/errors
 -* `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
 -* `^spew\.Dump$` -- forbid dumping detailed data to stdout
 -* `^spew.ConfigState\.Dump$` -- also forbid it via a `ConfigState`
--* `^fmt\.Errorf(# please use github\.com/pkg/errors)?$` -- forbid Errorf, with a custom message
--* `{p: ^fmt\.Errorf$, msg: please use github.com/pkg/errors}` -- the same with separate msg field
+-* `^spew\.Dump(# please do not use dumping to stdout)?$` -- forbid dumping, with a custom message
+-* `{p: ^spew\.Dump$, msg: please do not use dumping to stdout}` -- the same with separate msg field
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.

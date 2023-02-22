@@ -11,8 +11,6 @@ import (
 	"log"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type Issue interface {
@@ -71,7 +69,7 @@ type config struct {
 func NewLinter(patterns []string, options ...Option) (*Linter, error) {
 	cfg, err := newConfig(options...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to process options")
+		return nil, fmt.Errorf("failed to process options: %w", err)
 	}
 
 	if len(patterns) == 0 {
