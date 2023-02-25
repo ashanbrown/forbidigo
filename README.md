@@ -124,8 +124,8 @@ A larger set of interesting patterns might include:
 -* `^ginkgo\.F[A-Z].*$` -- forbid ginkgo focused commands (used for debug issues)
 -* `^spew\.Dump$` -- forbid dumping detailed data to stdout
 -* `^spew.ConfigState\.Dump$` -- also forbid it via a `ConfigState`
--* `^spew\.Dump(# please do not use dumping to stdout)?$` -- forbid dumping, with a custom message
--* `{p: ^spew\.Dump$, msg: please do not use dumping to stdout}` -- the same with separate msg field
+-* `^spew\.Dump(# please do not spew to stdout)?$` -- forbid spewing, with a custom message
+-* `{p: ^spew\.Dump$, msg: please do not spew to stdout}` -- the same with separate msg field
 
 ### Flags
 - **-set_exit_status** (default false) - Set exit status to 1 if any issues are found.
