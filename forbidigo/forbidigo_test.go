@@ -24,7 +24,7 @@ func foo() {
 	})
 
 	t.Run("it finds forbidden, renamed identifiers", func(t *testing.T) {
-		linter, _ := NewLinter([]string{`fmt\.Printf`})
+		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionAnalyzeTypes(true))
 		expectIssues(t, linter, true, `
 package bar
 
@@ -165,7 +165,9 @@ func ExampleFoo() {
 	})
 
 	t.Run("import renames detected with type information", func(t *testing.T) {
-		linter, err := NewLinter([]string{`^fmt\.Printf`}, OptionExcludeGodocExamples(false))
+		linter, err := NewLinter([]string{`^fmt\.Printf`},
+		OptionExcludeGodocExamples(false),
+			OptionAnalyzeTypes(true))
 		require.NoError(t, err)
 		expectIssues(t, linter, true, `
 package bar
