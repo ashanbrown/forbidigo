@@ -64,7 +64,7 @@ type config struct {
 	// don't check inside Godoc examples (see https://blog.golang.org/examples)
 	ExcludeGodocExamples   bool `options:",true"`
 	IgnorePermitDirectives bool // don't check for `permit` directives(for example, in favor of `nolint`)
-	AnalyzeTypes bool // enable to match canonical names for types and interfaces using type info
+	AnalyzeTypes           bool // enable to match canonical names for types and interfaces using type info
 }
 
 func NewLinter(patterns []string, options ...Option) (*Linter, error) {

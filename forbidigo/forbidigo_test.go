@@ -166,7 +166,7 @@ func ExampleFoo() {
 
 	t.Run("import renames detected with type information", func(t *testing.T) {
 		linter, err := NewLinter([]string{`^fmt\.Printf`},
-		OptionExcludeGodocExamples(false),
+			OptionExcludeGodocExamples(false),
 			OptionAnalyzeTypes(true))
 		require.NoError(t, err)
 		expectIssues(t, linter, true, `
