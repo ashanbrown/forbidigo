@@ -29,9 +29,9 @@ func (v *listVar) String() string {
 type analyzer struct {
 	patterns           []string
 	usePermitDirective bool
-	includeExamples bool
-	analyzeTypes    bool
-	debugLog        func(format string, args ...interface{})
+	includeExamples    bool
+	analyzeTypes       bool
+	debugLog           func(format string, args ...interface{})
 }
 
 // NewAnalyzer returns a go/analysis-compatible analyzer
