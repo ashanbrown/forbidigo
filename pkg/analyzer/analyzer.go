@@ -1,11 +1,12 @@
 package analyzer
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"go/ast"
 
 	"github.com/ashanbrown/forbidigo/forbidigo"
-	"github.com/pkg/errors"
 	"golang.org/x/tools/go/analysis"
 )
 
@@ -71,7 +72,7 @@ func (a *analyzer) runAnalysis(pass *analysis.Pass) (interface{}, error) {
 		forbidigo.OptionAnalyzeTypes(a.analyzeTypes),
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to configure linter")
+		return nil, fmt.Errorf("failed to configure linter: %w", err)
 	}
 	nodes := make([]ast.Node, 0, len(pass.Files))
 	for _, f := range pass.Files {
