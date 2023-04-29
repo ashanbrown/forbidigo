@@ -96,9 +96,9 @@ The full pattern struct has the following fields:
 
 * `msg`: an additional comment that gets added to the error message when a
   pattern matches.
-* `pattern`: the regular expression that matches the source code or expanded
+* `p`: the regular expression that matches the source code or expanded
   expression, depending on the global flag.
-* `package`: a regular expression for the full package import path. The package
+* `pkg`: a regular expression for the full package import path. The package
   path includes the package version if the package has a version >= 2. This is
   only supported when `analyze_types` is enabled.
 
