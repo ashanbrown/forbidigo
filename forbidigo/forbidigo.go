@@ -284,7 +284,7 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 		// type. We don't care about the value.
 		selectorText := v.textFor(node)
 		if typeAndValue, ok := v.runConfig.TypesInfo.Types[selector]; ok {
-			m, p, ok := pkgFromType(typeAndValue.Type)
+			m, p, ok := fullyQualifiedTypeName(typeAndValue.Type)
 			if !ok {
 				v.runConfig.DebugLog("%s: selector %q with supported type %T", location, selectorText, typeAndValue.Type)
 			}
@@ -295,30 +295,29 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 		// Some expressions need special treatment.
 		switch selector := selector.(type) {
 		case *ast.Ident:
-			object, ok := v.runConfig.TypesInfo.Uses[selector]
-			if !ok {
-				// No information about the identifier. Should
-				// not happen, but perhaps there were compile
-				// errors?
-				v.runConfig.DebugLog("%s: unknown selector identifier %q", location, selectorText)
-			} else {
+			if object, hasUses := v.runConfig.TypesInfo.Uses[selector]; hasUses {
 				switch object := object.(type) {
 				case *types.PkgName:
 					pkgText = object.Imported().Path()
 					matchTexts = []string{object.Imported().Name() + "." + field}
 					v.runConfig.DebugLog("%s: selector %q is package: %q -> %q, package %q", location, selectorText, srcText, matchTexts, pkgText)
 				case *types.Var:
-					m, p, ok := pkgFromType(object.Type())
-					if !ok {
+					if typeName, packageName, ok := fullyQualifiedTypeName(object.Type()); ok {
+						matchTexts = []string{typeName + "." + field}
+						pkgText = packageName
+						v.runConfig.DebugLog("%s: selector %q is variable of type %q: %q -> %q, package %q", location, selectorText, object.Type().String(), srcText, matchTexts, pkgText)
+					} else {
 						v.runConfig.DebugLog("%s: selector %q is variable with unsupported type %T", location, selectorText, object.Type())
 					}
-					matchTexts = []string{m + "." + field}
-					pkgText = p
-					v.runConfig.DebugLog("%s: selector %q is variable of type %q: %q -> %q, package %q", location, selectorText, object.Type().String(), srcText, matchTexts, pkgText)
 				default:
 					// Something else?
 					v.runConfig.DebugLog("%s: selector %q is identifier with unsupported type %T", location, selectorText, object)
 				}
+			} else {
+				// No information about the identifier. Should
+				// not happen, but perhaps there were compile
+				// errors?
+				v.runConfig.DebugLog("%s: unknown selector identifier %q", location, selectorText)
 			}
 		default:
 			v.runConfig.DebugLog("%s: selector %q of unsupported type %T", location, selectorText, selector)
@@ -329,10 +328,10 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 	return matchTexts, pkgText
 }
 
-// pkgFromType tries to determine `<package name>.<type name>` and the full
+// fullyQualifiedTypeName tries to determine `<package name>.<type name>` and the full
 // package path. This only needs to work for types of a selector in a selector
 // expression.
-func pkgFromType(t types.Type) (typeStr, pkgStr string, ok bool) {
+func fullyQualifiedTypeName(t types.Type) (typeName, packageName string, ok bool) {
 	if ptr, ok := t.(*types.Pointer); ok {
 		t = ptr.Elem()
 	}
