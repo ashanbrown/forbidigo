@@ -214,6 +214,14 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 			})
 		}
 	}
+
+	// descend into the left-side of selectors
+	if selector, isSelector := node.(*ast.SelectorExpr); isSelector {
+		if _, leftSideIsIdentifier := selector.X.(*ast.Ident); !leftSideIsIdentifier {
+			return v
+		}
+	}
+
 	return nil
 }
 
@@ -258,6 +266,10 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 		}
 		if pkg := object.Pkg(); pkg != nil {
 			pkgText = pkg.Path()
+			// if this is s a method, don't include the package name
+			if signature, ok := object.Type().(*types.Signature); ok && signature.Recv() != nil {
+				return []string{matchText}, pkgText
+			}
 			v.runConfig.DebugLog("%s: identifier: %q -> %q in package %q", location, srcText, matchText, pkgText)
 			// match either with or without package name
 			return []string{pkg.Name() + "." + srcText, srcText}, pkgText
