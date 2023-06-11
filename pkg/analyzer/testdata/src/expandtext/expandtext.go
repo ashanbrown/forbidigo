@@ -21,7 +21,7 @@ type myCustomStruct struct {
 }
 
 type myCustomInterface interface {
-	AlsoForbidden()
+	AlsoForbidden() *somepkg.Result
 }
 
 var forbiddenFunctionRef = somepkg.Forbidden // want "somepkg.Forbidden.*forbidden by pattern .*\\^pkg.*Forbidden"
@@ -39,6 +39,7 @@ func Foo() {
 
 	c := somepkg.CustomType{}
 	c.AlsoForbidden() // want "c.AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
+	_ = c.AlsoForbidden().Value // want "c.AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"
 
 	// Selector expression with result of function call in package.
 	somepkg.NewCustom().AlsoForbidden() // want "somepkg.NewCustom...AlsoForbidden.*forbidden by pattern.*\\^pkg..CustomType.*Forbidden"

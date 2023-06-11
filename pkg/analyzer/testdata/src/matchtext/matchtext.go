@@ -21,7 +21,7 @@ type myCustomStruct struct {
 }
 
 type myCustomInterface interface {
-	AlsoForbidden()
+	AlsoForbidden() *somepkg.Result
 }
 
 var forbiddenFunctionRef = somepkg.Forbidden
