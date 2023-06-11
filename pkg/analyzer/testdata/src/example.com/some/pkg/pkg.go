@@ -11,7 +11,14 @@ type CustomType struct {
 	ForbiddenField int
 }
 
-func (c CustomType) AlsoForbidden() {}
+
+type Result struct {
+	Value int
+}
+
+func (c CustomType) AlsoForbidden() *Result {
+	return nil
+}
 
 type CustomInterface interface {
 	StillForbidden()
