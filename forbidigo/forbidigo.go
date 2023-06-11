@@ -331,7 +331,7 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 // fullyQualifiedTypeName tries to determine `<package name>.<type name>` and the full
 // package path. This only needs to work for types of a selector in a selector
 // expression.
-func fullyQualifiedTypeName(t types.Type) (typeName, packageName string, ok bool) {
+func fullyQualifiedTypeName(t types.Type) (typeName, packagePath string, ok bool) {
 	if ptr, ok := t.(*types.Pointer); ok {
 		t = ptr.Elem()
 	}
