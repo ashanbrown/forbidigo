@@ -284,7 +284,7 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 		// type. We don't care about the value.
 		selectorText := v.textFor(node)
 		if typeAndValue, ok := v.runConfig.TypesInfo.Types[selector]; ok {
-			m, p, ok := fullyQualifiedTypeName(typeAndValue.Type)
+			m, p, ok := typeNameWithPackage(typeAndValue.Type)
 			if !ok {
 				v.runConfig.DebugLog("%s: selector %q with supported type %T", location, selectorText, typeAndValue.Type)
 			}
@@ -302,7 +302,7 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 					matchTexts = []string{object.Imported().Name() + "." + field}
 					v.runConfig.DebugLog("%s: selector %q is package: %q -> %q, package %q", location, selectorText, srcText, matchTexts, pkgText)
 				case *types.Var:
-					if typeName, packageName, ok := fullyQualifiedTypeName(object.Type()); ok {
+					if typeName, packageName, ok := typeNameWithPackage(object.Type()); ok {
 						matchTexts = []string{typeName + "." + field}
 						pkgText = packageName
 						v.runConfig.DebugLog("%s: selector %q is variable of type %q: %q -> %q, package %q", location, selectorText, object.Type().String(), srcText, matchTexts, pkgText)
@@ -328,10 +328,10 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 	return matchTexts, pkgText
 }
 
-// fullyQualifiedTypeName tries to determine `<package name>.<type name>` and the full
+// typeNameWithPackage tries to determine `<package name>.<type name>` and the full
 // package path. This only needs to work for types of a selector in a selector
 // expression.
-func fullyQualifiedTypeName(t types.Type) (typeName, packagePath string, ok bool) {
+func typeNameWithPackage(t types.Type) (typeName, packagePath string, ok bool) {
 	if ptr, ok := t.(*types.Pointer); ok {
 		t = ptr.Elem()
 	}
