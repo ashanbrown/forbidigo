@@ -16,7 +16,7 @@ func main() {
 	setExitStatus := flag.Bool("set_exit_status", false, "Set exit status to 1 if any issues are found")
 	includeTests := flag.Bool("tests", true, "Include tests")
 	excludeGodocExamples := flag.Bool("exclude_godoc_examples", true, "Exclude code in godoc examples")
-	expand := flag.Bool("analyze_types", false, "Replace the literal source code based on the semantic of the code before matching against patterns")
+	analyzeTypes := flag.Bool("analyze_types", false, "Replace the literal source code based on the semantic of the code before matching against patterns")
 	flag.Parse()
 
 	var patterns = []string(nil)
@@ -35,6 +35,7 @@ func main() {
 	}
 	options := []forbidigo.Option{
 		forbidigo.OptionExcludeGodocExamples(*excludeGodocExamples),
+		forbidigo.OptionAnalyzeTypes(*analyzeTypes),
 	}
 	linter, err := forbidigo.NewLinter(patterns, options...)
 	if err != nil {
@@ -46,7 +47,7 @@ func main() {
 		Tests: *includeTests,
 	}
 
-	if *expand {
+	if *analyzeTypes {
 		cfg.Mode |= packages.NeedTypesInfo | packages.NeedDeps
 	}
 
