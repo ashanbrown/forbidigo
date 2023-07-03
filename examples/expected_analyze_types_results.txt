@@ -1,0 +1,1 @@
+use of `db.Exec` forbidden by pattern `^sql\.DB\.Exec$` at CURDIR/examples/analyze_types_example.go:9:2
