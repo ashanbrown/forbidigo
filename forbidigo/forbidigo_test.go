@@ -179,12 +179,52 @@ func ExampleFoo() {
 }`, "use of `fmt2.Printf` forbidden by pattern `^fmt\\.Printf` at testing.go:7:2")
 	})
 
+	t.Run("it ignores function names but checks return type", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`Foo`}, OptionAnalyzeTypes(true))
+		expectIssues(t, linter, true, `
+package bar
+
+func Foo() {}
+func Bad() Foo {}
+}`, "use of `Foo` forbidden by pattern `Foo` at testing.go:5:12")
+	})
+
+	t.Run("it ignores type names but checks type", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`Foo`}, OptionAnalyzeTypes(true))
+		expectIssues(t, linter, true, `
+package bar
+
+type Foo struct {
+  Ok int
+  Bad Foo
+}`, "use of `Foo` forbidden by pattern `Foo` at testing.go:6:7")
+	})
+
+	t.Run("it ignores constant names but checks type", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`Foo`}, OptionAnalyzeTypes(true))
+		expectIssues(t, linter, true, `
+package bar
+
+const Foo = 1;
+const Bad Foo = 1;
+`, "use of `Foo` forbidden by pattern `Foo` at testing.go:5:11")
+	})
+
+	t.Run("it ignores import alises", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`Foo`}, OptionAnalyzeTypes(true))
+		expectIssues(t, linter, true, `
+package bar
+
+import Foo "foo"
+`)
+	})
 }
 
 // sourcePath matches "at /tmp/TestForbiddenIdentifiersdisplays_custom_messages4260088387/001/testing.go".
 var sourcePath = regexp.MustCompile(`at .*/([[:alnum:]]+.go)`)
 
 func expectIssues(t *testing.T, linter *Linter, expand bool, contents string, issues ...string) {
+	t.Helper()
 	actualIssues := parseFile(t, linter, expand, "testing.go", contents)
 	actualIssueStrs := make([]string, 0, len(actualIssues))
 	for _, i := range actualIssues {
@@ -192,7 +232,10 @@ func expectIssues(t *testing.T, linter *Linter, expand bool, contents string, is
 		str = sourcePath.ReplaceAllString(str, "at $1")
 		actualIssueStrs = append(actualIssueStrs, str)
 	}
-	assert.ElementsMatch(t, issues, actualIssueStrs)
+	if !assert.ElementsMatch(t, issues, actualIssueStrs) {
+		t.Logf("Expected: %v", issues)
+		t.Logf("Got: %v", actualIssueStrs)
+	}
 }
 
 func parseFile(t *testing.T, linter *Linter, expand bool, fileName, contents string) []Issue {
