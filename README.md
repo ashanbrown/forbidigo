@@ -19,7 +19,7 @@ functions (and whole files), that are identifies as Godoc examples (https://blog
 checking.
 
 By default, patterns get matched against the actual expression as it appears in
-the source code. The effect is that ``^fmt\.Print.*$` will not match when that
+the source code. The effect is that `^fmt\.Print.*$` will not match when that
 package gets imported with `import fmt2 "fmt"` and then the function gets
 called with `fmt2.Print`.
 
