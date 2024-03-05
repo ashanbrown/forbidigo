@@ -373,10 +373,11 @@ func typeNameWithPackage(t types.Type) (typeName, packagePath string, ok bool) {
 	case *types.Named:
 		obj := t.Obj()
 		pkg := obj.Pkg()
-		if pkg == nil {
-			return "", "", false
+		pkgPath := ""
+		if pkg != nil {
+			pkgPath = pkg.Path()
 		}
-		return pkg.Name() + "." + obj.Name(), pkg.Path(), true
+		return pkgPath + "." + obj.Name(), pkgPath, true
 	default:
 		return "", "", false
 	}
