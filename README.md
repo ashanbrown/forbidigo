@@ -7,12 +7,14 @@
 `forbidigo` is recommended to be run as part of [golangci-lint](https://github.com/golangci/golangci-lint) where it can be controlled using file-based configuration and `//nolint` directives, but it can also be run as a standalone tool.
 
 ## Installation
-
-    go get -u github.com/ashanbrown/forbidigo
+```
+go get -u github.com/ashanbrown/forbidigo
+```
 
 ## Usage
-
-    forbidigo [flags...] patterns... -- packages...
+```
+forbidigo [flags...] patterns... -- packages...
+```
 
 If no patterns are specified, the default pattern of `^(fmt\.Print.*|print|println)$` is used to eliminate debug statements.  By default,
 functions (and whole files), that are identifies as Godoc examples (https://blog.golang.org/examples) are excluded from 
@@ -36,15 +38,17 @@ Replacing the literal source code works for items in a package as in the
 `<package name>.<type name>.<field or method name>` replaces the source code
 text. `<package name>` is what the package declares in its `package` statement,
 which may be different from last part of the import path:
-
-      import "example.com/some/pkg" // pkg uses `package somepkg`
-      s := somepkg.SomeStruct{}
-      s.SomeMethod() // -> somepkg.SomeStruct.SomeMethod
+```go
+import "example.com/some/pkg" // pkg uses `package somepkg`
+s := somepkg.SomeStruct{}
+s.SomeMethod() // -> somepkg.SomeStruct.SomeMethod
+```
 
 Pointers are treated like the type they point to:
-
-      var cf *spew.ConfigState = ...
-      cf.Dump() // -> spew.ConfigState.Dump
+```go
+var cf *spew.ConfigState = ...
+cf.Dump() // -> spew.ConfigState.Dump
+```
 
 When a type is an alias for a type in some other package, the name of that
 other package will be used.
@@ -52,41 +56,44 @@ other package will be used.
 An imported identifier gets replaced as if it had been imported without `import .`
 *and* also gets matched literally, so in this example both `^ginkgo.FIt$`
 and `^FIt$` would catch the usage of `FIt`:
-
-     import . "github.com/onsi/ginkgo/v2"
-     FIt(...) // -> ginkgo.FIt, FIt
+```go
+import . "github.com/onsi/ginkgo/v2"
+FIt(...) // -> ginkgo.FIt, FIt
+```
 
 Beware that looking up the package name has limitations. When a struct embeds
 some other type, references to the inherited fields or methods get resolved
 with the outer struct as type:
+```go
+package foo
 
-     package foo
+type InnerStruct {
+    SomeField int
+}
 
-     type InnerStruct {
-         SomeField int
-     }
+func (i innerStruct) SomeMethod() {}
 
-     func (i innerStruct) SomeMethod() {}
+type OuterStruct {
+    InnerStruct
+}
 
-     type OuterStruct {
-         InnerStruct
-     }
-
-     s := OuterStruct{}
-     s.SomeMethod() // -> foo.OuterStruct.SomeMethod
-     i := s.SomeField // -> foo.OuterStruct.SomeField
+s := OuterStruct{}
+s.SomeMethod() // -> foo.OuterStruct.SomeMethod
+i := s.SomeField // -> foo.OuterStruct.SomeField
+```
 
 When a method gets called via some interface, that invocation also only
 gets resolved to the interface, not the underlying implementation:
+```go
+// innerStruct as above
 
-    // innerStruct as above
+type myInterface interface {
+    SomeMethod()
+}
 
-    type myInterface interface {
-        SomeMethod()
-    }
-
-    var i myInterface = InnerStruct{}
-    i.SomeMethod() // -> foo.myInterface.SomeMethod
+var i myInterface = InnerStruct{}
+i.SomeMethod() // -> foo.myInterface.SomeMethod
+```
 
 Using the package name is simple, but the name is not necessarily unique. For
 more advanced cases, it is possible to specify more complex patterns. Such
@@ -106,17 +113,18 @@ To distinguish such patterns from traditional regular expression patterns, the
 encoding must start with a `{` or contain line breaks. When using just JSON
 encoding, backslashes must get quoted inside strings. When using YAML, this
 isn't necessary. The following pattern strings are equivalent:
+```go
+{p: "^fmt\\.Println$", msg: "do not write to stdout"}
 
-    {p: "^fmt\\.Println$", msg: "do not write to stdout"}
+{p: ^fmt\.Println$,
+    msg: do not write to stdout,
+}
 
-    {p: ^fmt\.Println$,
-     msg: do not write to stdout,
-    }
+{p: ^fmt\.Println$, msg: do not write to stdout}
 
-    {p: ^fmt\.Println$, msg: do not write to stdout}
-
-    p: ^fmt\.Println$
-    msg: do not write to stdout
+p: ^fmt\.Println$
+msg: do not write to stdout
+```
 
 A larger set of interesting patterns might include:
 
