@@ -113,7 +113,7 @@ To distinguish such patterns from traditional regular expression patterns, the
 encoding must start with a `{` or contain line breaks. When using just JSON
 encoding, backslashes must get quoted inside strings. When using YAML, this
 isn't necessary. The following pattern strings are equivalent:
-```go
+```
 {p: "^fmt\\.Println$", msg: "do not write to stdout"}
 
 {p: ^fmt\.Println$,
