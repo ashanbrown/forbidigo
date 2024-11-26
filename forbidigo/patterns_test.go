@@ -1,11 +1,12 @@
 package forbidigo
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func TestParseValidPatterns(t *testing.T) {
@@ -113,9 +114,8 @@ func TestUnmarshalYAML(t *testing.T) {
 			expectedPattern: `fmt\.Errorf`,
 		},
 		{
-			name: "match import with YAML",
-			yaml: `p: ^fmt\.Println$
-`,
+			name:            "match import with YAML",
+			yaml:            `p: ^fmt\.Println$	`,
 			expectedPattern: `^fmt\.Println$`,
 		},
 		{
@@ -124,9 +124,8 @@ func TestUnmarshalYAML(t *testing.T) {
 			expectedErr: "unable to compile source code pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
 		},
 		{
-			name: "struct: invalid regexp",
-			yaml: `p: fmt\
-`,
+			name:        "struct: invalid regexp",
+			yaml:        `p: fmt\	`,
 			expectedErr: "unable to compile source code pattern `fmt\\`: error parsing regexp: trailing backslash at end of expression: ``",
 		},
 		{
@@ -139,7 +138,9 @@ func TestUnmarshalYAML(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var p yamlPattern
-			err := yaml.UnmarshalStrict([]byte(tc.yaml), &p)
+			decoder := yaml.NewDecoder(bytes.NewReader([]byte(tc.yaml)))
+			decoder.KnownFields(true)
+			err := decoder.Decode(&p)
 			if tc.expectedErr == "" {
 				require.NoError(t, err)
 			} else {

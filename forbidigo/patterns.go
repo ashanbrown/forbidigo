@@ -1,12 +1,14 @@
 package forbidigo
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"regexp"
 	"regexp/syntax"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // pattern matches code that is not supposed to be used.
@@ -33,15 +35,15 @@ type pattern struct {
 // patterns).
 type yamlPattern pattern
 
-func (p *yamlPattern) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (p *yamlPattern) UnmarshalYAML(value *yaml.Node) error {
 	// Try struct first. It's unlikely that a regular expression string
 	// is valid YAML for a struct.
 	var ptrn pattern
-	if err := unmarshal(&ptrn); err != nil {
+	if err := unmarshalStrict(&ptrn, value); err != nil && err != io.EOF {
 		errStr := err.Error()
 		// Didn't work, try plain string.
 		var ptrn string
-		if err := unmarshal(&ptrn); err != nil {
+		if err := unmarshalStrict(&ptrn, value); err != nil && err != io.EOF {
 			return fmt.Errorf("pattern is neither a regular expression string (%s) nor a Pattern struct (%s)", err.Error(), errStr)
 		}
 		p.Pattern = ptrn
@@ -49,6 +51,20 @@ func (p *yamlPattern) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		*p = yamlPattern(ptrn)
 	}
 	return ((*pattern)(p)).validate()
+}
+
+// unmarshalStrict implements missing yaml.UnmarshalStrict in gopkg.in/yaml.v3.
+// See https://github.com/go-yaml/yaml/issues/639.
+// Inspired by https://github.com/ffenix113/zigbee_home/pull/68
+func unmarshalStrict(to any, node *yaml.Node) error {
+	buf := &bytes.Buffer{}
+	if err := yaml.NewEncoder(buf).Encode(node); err != nil {
+		return err
+	}
+
+	decoder := yaml.NewDecoder(buf)
+	decoder.KnownFields(true)
+	return decoder.Decode(to)
 }
 
 var _ yaml.Unmarshaler = &yamlPattern{}
@@ -61,7 +77,9 @@ func parse(ptrn string) (*pattern, error) {
 	if strings.HasPrefix(strings.TrimSpace(ptrn), "{") ||
 		strings.Contains(ptrn, "\n") {
 		// Embedded JSON or YAML. We can decode both with the YAML decoder.
-		if err := yaml.UnmarshalStrict([]byte(ptrn), pattern); err != nil {
+		decoder := yaml.NewDecoder(strings.NewReader(ptrn))
+		decoder.KnownFields(true)
+		if err := decoder.Decode(pattern); err != nil && err != io.EOF {
 			return nil, fmt.Errorf("parsing as JSON or YAML failed: %v", err)
 		}
 	} else {
