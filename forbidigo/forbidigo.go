@@ -224,6 +224,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	case *ast.SelectorExpr:
 	case *ast.Ident:
 	case *ast.GoStmt:
+	case *ast.BinaryExpr:
 	// Everything else isn't.
 	default:
 		return v
