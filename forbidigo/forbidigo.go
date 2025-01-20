@@ -223,6 +223,7 @@ func (v *visitor) Visit(node ast.Node) ast.Visitor {
 	// The following two are handled below.
 	case *ast.SelectorExpr:
 	case *ast.Ident:
+	case *ast.GoStmt:
 	// Everything else isn't.
 	default:
 		return v

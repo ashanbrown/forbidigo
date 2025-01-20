@@ -48,3 +48,18 @@ func TestExpandAnalyzer(t *testing.T) {
 	}
 	analysistest.Run(t, testdata, a, "expandtext")
 }
+
+func TestGoKeywordAnalyzer(t *testing.T) {
+	testdata := analysistest.TestData()
+	patterns := append(forbidigo.DefaultPatterns(),
+		`panic`,
+		`^go .*$`,
+	)
+	a := newAnalyzer(t.Logf)
+	for _, pattern := range patterns {
+		if err := a.Flags.Set("p", pattern); err != nil {
+			t.Fatalf("unexpected error when setting pattern: %v", err)
+		}
+	}
+	analysistest.Run(t, testdata, a, "gokeyword")
+}
