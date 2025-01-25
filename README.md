@@ -29,7 +29,9 @@ name is so generic that import aliases have to be used. To solve this,
 forbidigo also supports a more advanced mode where it uses type information to
 identify what an expression references. This needs to be enabled through the
 `analyze_types` command line parameter. Beware this may have a performance
-impact because additional information is required for the analysis.
+impact because additional information is required for the analysis.  Note that 
+[builtin types](https://pkg.go.dev/builtin) types (`error`, `byte`, etc) are 
+considered to have the package name "" (emptry string).
 
 Replacing the literal source code works for items in a package as in the
 `fmt2.Print` example above and also for struct fields and methods. For those,
@@ -101,8 +103,8 @@ The full pattern struct has the following fields:
 
 * `msg`: an additional comment that gets added to the error message when a
   pattern matches.
-* `p`: the regular expression that matches the source code or expanded
-  expression, depending on the global flag.
+* `p`: the regular expression that matches the source code or, when `analyze_flags` is set, the expanded
+  expression including the package name.
 * `pkg`: a regular expression for the full package import path. The package
   path includes the package version if the package has a version >= 2. This is
   only supported when `analyze_types` is enabled.
