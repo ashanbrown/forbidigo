@@ -3,7 +3,7 @@ package analyzer
 import (
 	"testing"
 
-	"github.com/ashanbrown/forbidigo/forbidigo"
+	"github.com/ashanbrown/forbidigo/v2/forbidigo"
 	"golang.org/x/tools/go/analysis/analysistest"
 )
 
