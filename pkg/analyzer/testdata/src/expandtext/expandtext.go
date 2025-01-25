@@ -69,6 +69,10 @@ func Foo() {
 	// Package name != import path.
 	renamed.ForbiddenFunc()            // want "renamed.Forbidden.* by pattern .*renamed..Forbidden"
 	renamed.Struct{}.ForbiddenMethod() // want "renamed.Struct...ForbiddenMethod.* by pattern .*renamed.*Struct.*Forbidden"
+
+	// Builtin type.
+	err := error(nil)
+	err.Error() // want "err\\.Error.*forbidden by pattern.*\\^error.*Error\\$"
 }
 
 func Bar() string {

@@ -23,6 +23,17 @@ func foo() {
 }`, "use of `fmt.Printf` forbidden by pattern `fmt\\.Printf` at testing.go:5:2")
 	})
 
+	t.Run("it finds forbidden identifiers in builtin package", func(t *testing.T) {
+		linter, _ := NewLinter([]string{`^error\.Error$`}, OptionAnalyzeTypes(true))
+		expectIssues(t, linter, true, `
+package bar
+
+func foo() {
+	var err error
+	err.Error()
+}`, "use of `err.Error` forbidden by pattern `^error\\.Error$` at testing.go:6:2")
+	})
+
 	t.Run("it finds forbidden, renamed identifiers", func(t *testing.T) {
 		linter, _ := NewLinter([]string{`fmt\.Printf`}, OptionAnalyzeTypes(true))
 		expectIssues(t, linter, true, `

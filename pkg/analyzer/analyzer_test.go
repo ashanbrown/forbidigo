@@ -36,6 +36,7 @@ func TestExpandAnalyzer(t *testing.T) {
 		`{p: myCustomInterface\.AlsoForbidden, pkg: ^expandtext$}`,
 		`{p: renamed\.Forbidden, pkg: ^example.com/some/renamedpkg$}`,
 		`{p: renamed\.Struct.Forbidden, pkg: ^example.com/some/renamedpkg$}`,
+		`{p: ^error\.Error$}`,
 	)
 	a := newAnalyzer(t.Logf)
 	for _, pattern := range patterns {
