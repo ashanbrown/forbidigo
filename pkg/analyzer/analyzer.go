@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"go/ast"
 
-	"github.com/ashanbrown/forbidigo/forbidigo"
+	"github.com/ashanbrown/forbidigo/v2/forbidigo"
 	"golang.org/x/tools/go/analysis"
 )
 
