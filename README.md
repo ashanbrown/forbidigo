@@ -1,6 +1,6 @@
 # forbidigo
 
-[![Github Actions](https://github.com/ashanbrown/forbidigo/actions/workflows/build.yml/badge.svg)](https://github.com/ashanbrown/forbidigo/actions/workflows/build.yml)
+[![Github Actions](https://github.com/ashanbrown/forbidigo/actions/workflows/build.yml/badge.svg)](https://github.com/ashanbrown/forbidigo/actions/workflows/build.yml?query=branch%3Amaster)
 
 `forbidigo` is recommended to be run as part of [golangci-lint](https://github.com/golangci/golangci-lint) where it can be controlled using file-based configuration and `//nolint` directives, but it can also be run as a standalone tool.
 
