@@ -317,13 +317,15 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 		// type. We don't care about the value.
 		selectorText := v.textFor(node)
 		if typeAndValue, ok := v.runConfig.TypesInfo.Types[selector]; ok {
-			m, p, ok := typeNameWithPackage(typeAndValue.Type)
-			if !ok {
-				v.runConfig.DebugLog("%s: selector %q with supported type %T", location, selectorText, typeAndValue.Type)
+			if typeName, pkgPath, ok := typeNameWithPackage(typeAndValue.Type); ok {
+				v.runConfig.DebugLog("%s: selector %q with supported type %q: %q -> %q, package %q", location, selectorText, typeAndValue.Type.String(), srcText, matchTexts, pkgPath)
+				matchTexts = []string{typeName + "." + field}
+				pkgText = pkgPath
+			} else {
+				// handle cases such as anonymous structs
+				v.runConfig.DebugLog("%s: selector %q with unknown type %T", location, selectorText, typeAndValue.Type)
+				matchTexts = []string{}
 			}
-			matchTexts = []string{m + "." + field}
-			pkgText = p
-			v.runConfig.DebugLog("%s: selector %q with supported type %q: %q -> %q, package %q", location, selectorText, typeAndValue.Type.String(), srcText, matchTexts, pkgText)
 		}
 		// Some expressions need special treatment.
 		switch selector := selector.(type) {
@@ -340,7 +342,9 @@ func (v *visitor) expandMatchText(node ast.Node, srcText string) (matchTexts []s
 						pkgText = packageName
 						v.runConfig.DebugLog("%s: selector %q is variable of type %q: %q -> %q, package %q", location, selectorText, object.Type().String(), srcText, matchTexts, pkgText)
 					} else {
+						// handle cases such as anonymous structs
 						v.runConfig.DebugLog("%s: selector %q is variable with unsupported type %T", location, selectorText, object.Type())
+						matchTexts = []string{}
 					}
 				default:
 					// Something else?
@@ -373,11 +377,11 @@ func typeNameWithPackage(t types.Type) (typeName, packagePath string, ok bool) {
 	case *types.Named:
 		obj := t.Obj()
 		pkg := obj.Pkg()
-		pkgPath := ""
-		if pkg != nil {
-			pkgPath = pkg.Path()
+		// we either lack a package or the package is the "universe" (i.e. builtin)
+		if pkg == nil {
+			return obj.Name(), "", true
 		}
-		return pkgPath + "." + obj.Name(), pkgPath, true
+		return pkg.Name() + "." + obj.Name(), pkg.Path(), true
 	default:
 		return "", "", false
 	}
