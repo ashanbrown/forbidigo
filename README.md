@@ -6,7 +6,7 @@
 
 ## Installation
 ```
-go get -u github.com/ashanbrown/forbidigo
+go install github.com/ashanbrown/forbidigo@latest
 ```
 
 ## Usage
@@ -31,7 +31,7 @@ identify what an expression references. This needs to be enabled through the
 `analyze_types` command line parameter. Beware this may have a performance
 impact because additional information is required for the analysis.  Note that 
 [builtin types](https://pkg.go.dev/builtin) types (`error`, `byte`, etc) are 
-considered to have the package name "" (emptry string).
+considered to have the package name "" (empty string).
 
 Replacing the literal source code works for items in a package as in the
 `fmt2.Print` example above and also for struct fields and methods. For those,
