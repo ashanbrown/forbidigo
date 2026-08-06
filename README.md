@@ -6,7 +6,7 @@
 
 ## Installation
 ```
-go install github.com/ashanbrown/forbidigo@latest
+go install github.com/ashanbrown/forbidigo/v2@latest
 ```
 
 ## Usage
